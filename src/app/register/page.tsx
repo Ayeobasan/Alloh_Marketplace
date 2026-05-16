@@ -1,0 +1,311 @@
+"use client"
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { Stepper } from '@/components/shared/Stepper';
+import { AuthHeader } from '@/components/layout/AuthHeader';
+import { AuthFooter } from '@/components/layout/AuthFooter';
+import { AccountCard } from '@/components/shared/AccountCard';
+import { InputField } from '@/components/shared/InputField';
+import { cn } from '@/lib/utils';
+import { 
+  ArrowLeft, 
+  Camera, 
+  CheckCircle2, 
+  ShoppingBag, 
+  Sprout, 
+  UploadCloud,
+  Eye,
+  EyeOff,
+  Mail,
+} from 'lucide-react';
+import { Input, ConfigProvider } from 'antd';
+
+const STEPS = ["Choose Account", "Fill Form", "Upload Document", "Verification"];
+const CATEGORIES = [
+  "Organic", "Fruits", "Grains", "Tubers", "Vegetables", "Dairy Products", 
+  "Wholesale", "Livestock", "Fertilizers", "Equipements", "Seeds", "Hydroponics", "Spices & Herbs"
+];
+
+type SubStep = 'selection' | 'uploading' | 'verifying' | 'success' | 'otp' | 'verified';
+
+export default function RegisterPage() {
+  const [step, setStep] = useState(1);
+  const [subStep, setSubStep] = useState<SubStep>('selection');
+  const [accountType, setAccountType] = useState<'buyer' | 'seller' | null>(null);
+  const [selectedDoc, setSelectedDoc] = useState<number | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [showPassword, setShowPassword] = useState(false);
+  
+  const [formData, setFormData] = useState({
+    fullName: '',
+    experience: '',
+    address: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: ''
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const toggleCategory = (cat: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+    );
+  };
+
+  const getStep2Progress = () => {
+    const fields = accountType === 'buyer' 
+      ? [formData.fullName, formData.email, formData.phone, formData.password, formData.confirmPassword]
+      : Object.values(formData);
+    const filledFields = fields.filter(f => f.length > 0).length;
+    return filledFields / fields.length;
+  };
+
+  const getSubStepProgress = () => {
+    if (step === 2) return getStep2Progress();
+    if (step === 3) {
+      if (accountType === 'buyer') return selectedCategories.length > 0 ? 0.8 : 0.2;
+      if (subStep === 'uploading') return 0.25;
+      if (subStep === 'verifying') return 0.5;
+      if (subStep === 'success') return 0.75;
+    }
+    return 0;
+  };
+
+  const nextStep = () => {
+    if (step === 1 && accountType) { setStep(2); return; }
+    if (step === 2) { setStep(3); setSubStep('selection'); return; }
+    if (step === 3) {
+      if (accountType === 'buyer') { setStep(4); setSubStep('otp'); return; }
+      if (subStep === 'selection' && selectedDoc !== null) { setSubStep('uploading'); return; }
+      if (subStep === 'uploading') { 
+        setSubStep('verifying'); 
+        setTimeout(() => setSubStep('success'), 2000); 
+        return; 
+      }
+      if (subStep === 'success') { setStep(4); setSubStep('otp'); return; }
+    }
+    if (step === 4 && subStep === 'otp') { setSubStep('verified'); return; }
+  };
+
+  const prevStep = () => {
+    if (step === 3 && subStep !== 'selection') { setSubStep('selection'); return; }
+    setStep(s => Math.max(s - 1, 1));
+  };
+
+  return (
+    <ConfigProvider theme={{ token: { colorPrimary: '#326D08', borderRadius: 12 } }}>
+    <div className="min-h-screen bg-[#F9FAFB] flex flex-col">
+      <AuthHeader />
+
+      <main className="flex-1 flex flex-col max-w-5xl mx-auto w-full px-4 md:px-0">
+        <Stepper currentStep={step} steps={STEPS} subStepProgress={getSubStepProgress()} />
+
+        <div className="flex-1 py-8 md:py-12">
+          {/* STEP 1: CHOOSE ACCOUNT */}
+          {step === 1 && (
+            <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="text-center space-y-4">
+                <h1 className="text-3xl md:text-4xl font-bold text-slate-900">How would you like to use AllohFarm?</h1>
+                <p className="text-slate-500 max-w-md mx-auto">Select your preferred type of account to get started.</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+                <AccountCard 
+                  active={accountType === 'buyer'} 
+                  onClick={() => setAccountType('buyer')} 
+                  icon={<ShoppingBag size={28} />} 
+                  title="I’m a Buyer" 
+                  desc="I want to buy fresh, high-quality produce directly from local farms." 
+                />
+                <AccountCard 
+                  active={accountType === 'seller'} 
+                  onClick={() => setAccountType('seller')} 
+                  icon={<Sprout size={28} />} 
+                  title="I’m a Seller" 
+                  desc="I want to sell my farm produce and reach a larger community of customers" 
+                />
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: FILL FORM */}
+          {step === 2 && (
+            <div className="max-w-3xl mx-auto space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
+              <div className="flex items-center gap-4">
+                <button onClick={prevStep} className="p-2 hover:bg-slate-100 rounded-lg transition-colors"><ArrowLeft size={24} /></button>
+                <div className="space-y-1">
+                  <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+                    {accountType === 'buyer' ? "Start your Fresh Journey" : "Tell us about you and your farm"}
+                  </h1>
+                  <p className="text-sm text-slate-500">
+                    {accountType === 'buyer' 
+                      ? "Tell us a bit about yourself so we can find the best local harvest for you."
+                      : "Please provide your business details and secure your account."}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <InputField 
+                    label={accountType === 'buyer' ? "Full Name" : "Farm Name"} 
+                    name="fullName" 
+                    value={formData.fullName} 
+                    onChange={handleInputChange} 
+                    placeholder={accountType === 'buyer' ? "Enter your full name" : "Green Valley Organic Farm"} 
+                  />
+                  {accountType === 'seller' && (
+                    <InputField 
+                      label="Experience" 
+                      name="experience" 
+                      value={formData.experience} 
+                      onChange={handleInputChange} 
+                      placeholder="e.g. 5 years" 
+                    />
+                  )}
+                </div>
+                <InputField 
+                  label="Email Address" 
+                  name="email" 
+                  value={formData.email} 
+                  onChange={handleInputChange} 
+                  placeholder="e.g. name@example.com" 
+                />
+                <InputField 
+                  label="Phone Number" 
+                  name="phone" 
+                  value={formData.phone} 
+                  onChange={handleInputChange} 
+                  placeholder="+234 **********" 
+                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <InputField 
+                    label="Create Password" 
+                    name="password" 
+                    type={showPassword ? "text" : "password"} 
+                    value={formData.password} 
+                    onChange={handleInputChange} 
+                    placeholder="*************" 
+                    rightElement={
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    }
+                  />
+                  <InputField 
+                    label="Confirm Password" 
+                    name="confirmPassword" 
+                    type={showPassword ? "text" : "password"} 
+                    value={formData.confirmPassword} 
+                    onChange={handleInputChange} 
+                    placeholder="*************" 
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: UPLOAD / PERSONALIZE */}
+          {step === 3 && (
+            <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in duration-500">
+              {accountType === 'buyer' ? (
+                <div className="space-y-12 text-center">
+                  <div className="flex items-center gap-4 text-left">
+                    <button onClick={prevStep} className="p-2 hover:bg-slate-100 rounded-lg transition-colors"><ArrowLeft size={24} /></button>
+                    <div className="space-y-1">
+                      <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Let’s personalise your Experience</h1>
+                      <p className="text-sm text-slate-500">Select the categories you care about most to curate your experience.</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-3 max-w-2xl mx-auto pt-8">
+                    {CATEGORIES.map(cat => (
+                      <button key={cat} onClick={() => toggleCategory(cat)} className={cn("px-6 py-2.5 rounded-full border text-sm font-medium transition-all shadow-sm", selectedCategories.includes(cat) ? "border-primary bg-emerald-50 text-primary font-bold" : "border-slate-200 bg-white text-slate-500 hover:border-emerald-200")}>
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-10">
+                   <div className="flex items-center gap-4">
+                    <button onClick={prevStep} className="p-2 hover:bg-slate-100 rounded-lg transition-colors"><ArrowLeft size={24} /></button>
+                    <div className="space-y-1">
+                      <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Upload Identification to build Trust</h1>
+                    </div>
+                  </div>
+                  {subStep === 'selection' && (
+                    <div className="space-y-4">
+                      {["Government ID", "Business Permit", "Farm Certification"].map((doc, i) => (
+                        <button key={i} onClick={() => setSelectedDoc(i)} className={cn("w-full card-premium flex items-center gap-6 group border-2", selectedDoc === i ? "border-primary shadow-md" : "border-transparent bg-white")}>
+                          <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-primary"><ShoppingBag size={20} /></div>
+                          <div className="text-left flex-1"><h4 className="text-sm font-bold text-slate-900">{doc}</h4></div>
+                          {selectedDoc === i && <CheckCircle2 className="text-primary" size={20} />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {subStep === 'uploading' && (
+                    <div className="w-full h-64 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-3 bg-white">
+                      <UploadCloud size={32} className="text-slate-400" />
+                      <p className="text-sm font-medium text-slate-600">Drag & drop files or <span className="text-primary font-bold underline">browse</span></p>
+                    </div>
+                  )}
+                  {subStep === 'success' && (
+                    <div className="flex flex-col items-center py-10 space-y-4 text-center animate-in zoom-in-95">
+                      <CheckCircle2 size={64} className="text-primary" />
+                      <h2 className="text-2xl font-bold text-slate-900">Document Uploaded Successfully!</h2>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* STEP 4: VERIFICATION */}
+          {step === 4 && (
+            <div className="max-w-2xl mx-auto space-y-12 animate-in fade-in duration-500">
+               {subStep === 'otp' ? (
+                 <div className="flex flex-col items-center space-y-10 text-center">
+                    <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center"><Mail size={32} className="text-emerald-700 opacity-30" /></div>
+                    <div className="space-y-2">
+                      <h2 className="text-2xl font-bold text-slate-900">Verify your Email</h2>
+                      <p className="text-sm text-slate-500">Enter the 6-digit code sent to your email.</p>
+                    </div>
+                    <Input.OTP size="large" length={6} style={{ gap: '12px' }} />
+                    <button className="text-xs font-bold text-primary underline">Resend Code</button>
+                 </div>
+               ) : (
+                 <div className="flex flex-col items-center space-y-8 text-center">
+                    <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center"><CheckCircle2 size={40} className="text-primary" /></div>
+                    <h2 className="text-3xl font-bold text-slate-900">Registration Complete!</h2>
+                 </div>
+               )}
+          </div>
+          )}
+
+          <div className="mt-12 max-w-3xl mx-auto w-full flex flex-col items-center gap-4 px-4 md:px-0">
+            {subStep === 'verified' ? (
+              <a href="/login" className="btn-primary w-full md:max-w-sm h-14">Go Login</a>
+            ) : (
+              <button 
+                onClick={nextStep} 
+                disabled={(step === 1 && !accountType) || (step === 3 && accountType === 'seller' && subStep === 'selection' && selectedDoc === null)} 
+                className="btn-primary w-full md:max-w-sm h-14 shadow-lg shadow-primary/20"
+              >
+                Continue
+              </button>
+            )}
+            <p className="text-sm text-slate-400">Already have an account? <Link href="/login" className="text-primary font-bold">Log in</Link></p>
+          </div>
+        </div>
+      </main>
+
+      <AuthFooter />
+    </div>
+    </ConfigProvider>
+  );
+}
