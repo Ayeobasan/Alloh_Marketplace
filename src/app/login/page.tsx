@@ -1,15 +1,25 @@
 "use client"
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { AuthHeader } from '@/components/layout/AuthHeader';
 import { AuthFooter } from '@/components/layout/AuthFooter';
 import { InputField } from '@/components/shared/InputField';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff } from 'lucide-react';
+import { useMarketStore } from '@/store/useMarketStore';
 
 export default function LoginPage() {
-  const [role, setRole] = useState<'buyer' | 'seller'>('seller');
+  const router = useRouter();
+  const { setActiveRole } = useMarketStore();
+  const [role, setRole] = useState<'buyer' | 'seller'>('buyer');
   const [showPassword, setShowPassword] = useState(false);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setActiveRole(role);
+    router.push('/demands');
+  };
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col">
@@ -24,30 +34,31 @@ export default function LoginPage() {
 
           {/* Role Toggle */}
           <div className="flex items-center justify-center gap-4">
-             <span className={cn("text-xs font-bold transition-colors", role === 'buyer' ? "text-primary" : "text-slate-300 uppercase tracking-widest")}>Buyer</span>
-             <button 
+            <span className={cn("text-xs font-bold transition-colors", role === 'buyer' ? "text-primary" : "text-slate-300 uppercase tracking-widest")}>Buyer</span>
+            <button
+              type="button"
               onClick={() => setRole(role === 'buyer' ? 'seller' : 'buyer')}
               className="w-12 h-6 bg-slate-100 rounded-full relative p-1 transition-colors group"
-             >
-                <div className={cn(
-                  "w-4 h-4 bg-primary rounded-full transition-all duration-300 shadow-sm",
-                  role === 'seller' ? "translate-x-6" : "translate-x-0"
-                )} />
-             </button>
-             <span className={cn("text-xs font-bold transition-colors", role === 'seller' ? "text-primary" : "text-slate-300 uppercase tracking-widest")}>Seller</span>
+            >
+              <div className={cn(
+                "w-4 h-4 bg-primary rounded-full transition-all duration-300 shadow-sm",
+                role === 'seller' ? "translate-x-6" : "translate-x-0"
+              )} />
+            </button>
+            <span className={cn("text-xs font-bold transition-colors", role === 'seller' ? "text-primary" : "text-slate-300 uppercase tracking-widest")}>Seller</span>
           </div>
 
-          <form className="space-y-6">
-            <InputField 
-              label="Email Address" 
-              type="email" 
-              placeholder="name@example.com" 
+          <form onSubmit={handleLogin} className="space-y-6">
+            <InputField
+              label="Email Address"
+              type="email"
+              placeholder="name@example.com"
             />
 
-            <InputField 
-              label="Password" 
-              type={showPassword ? "text" : "password"} 
-              placeholder="***********" 
+            <InputField
+              label="Password"
+              type={showPassword ? "text" : "password"}
+              placeholder="***********"
               rightElement={
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-400 hover:text-slate-600 transition-colors">
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -77,8 +88,8 @@ export default function LoginPage() {
           </div>
 
           <button className="w-full h-14 border border-slate-200 rounded-xl flex items-center justify-center gap-3 hover:bg-slate-50 transition-all font-bold text-sm text-slate-700">
-             <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
-             Continue with Google
+            <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+            Continue with Google
           </button>
 
           <p className="text-center text-sm text-slate-500 font-medium pt-4">
