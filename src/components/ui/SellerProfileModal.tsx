@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Modal, Button, message } from 'antd';
+import { Modal, message } from 'antd';
 import { Sprout, UploadCloud, CheckCircle2, X } from 'lucide-react';
 import { InputField } from '@/components/shared/InputField';
 import { cn } from '@/lib/utils';
@@ -9,26 +9,34 @@ import { cn } from '@/lib/utils';
 interface SellerProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onComplete: (data: { farmName: string; experience: string; documents: string[] }) => void;
+  onComplete: (data: { farmName: string; experience: string; kycType: string; kycDocument: File }) => void;
+  isSubmitting?: boolean;
 }
 
-export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ isOpen, onClose, onComplete }) => {
+export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onComplete,
+  isSubmitting = false
+}) => {
   const [farmName, setFarmName] = useState('');
   const [experience, setExperience] = useState('');
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [kycType, setKycType] = useState('Farm Certification');
+  const [kycDocument, setKycDocument] = useState<File | null>(null);
 
-  const handleFakeUpload = () => {
-    setIsUploading(true);
-    setTimeout(() => {
-      setUploadedFiles(prev => [...prev, `document_${prev.length + 1}.pdf`]);
-      setIsUploading(false);
-    }, 1200);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        message.error('File size must be under 5MB.');
+        return;
+      }
+      setKycDocument(file);
+    }
   };
 
-  const removeFile = (index: number) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  const removeFile = () => {
+    setKycDocument(null);
   };
 
   const handleSubmit = () => {
@@ -40,23 +48,27 @@ export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ isOpen, 
       message.error('Please enter your experience.');
       return;
     }
+    if (!kycDocument) {
+      message.error('Please upload your KYC verification document.');
+      return;
+    }
 
-    setIsSubmitting(true);
-    setTimeout(() => {
-      onComplete({ farmName, experience, documents: uploadedFiles });
-      setIsSubmitting(false);
-      setFarmName('');
-      setExperience('');
-      setUploadedFiles([]);
-      message.success('Seller profile completed! You are now a seller.');
-    }, 800);
+    onComplete({ farmName, experience, kycType, kycDocument });
+  };
+
+  const handleModalClose = () => {
+    setFarmName('');
+    setExperience('');
+    setKycType('Farm Certification');
+    setKycDocument(null);
+    onClose();
   };
 
   return (
     <Modal
       title={null}
       open={isOpen}
-      onCancel={onClose}
+      onCancel={handleModalClose}
       footer={null}
       width={520}
       centered
@@ -75,7 +87,7 @@ export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ isOpen, 
               <p className="text-xs text-slate-500">Add your farm details to start selling</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+          <button onClick={handleModalClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
             <X size={20} className="text-slate-400" />
           </button>
         </div>
@@ -90,55 +102,63 @@ export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ isOpen, 
             placeholder="e.g. Green Valley Organic Farm"
           />
           <InputField
-            label="Experience"
+            label="Years of Experience"
             name="experience"
+            type="number"
+            min="0"
             value={experience}
             onChange={(e) => setExperience(e.target.value)}
-            placeholder="e.g. 5 years in crop farming"
+            placeholder="e.g. 4"
           />
+
+          {/* KYC Type Select */}
+          <div className="space-y-2 w-full">
+            <div className="flex items-center justify-between px-1">
+              <label className="text-xs font-bold text-slate-700">Verification Document Type</label>
+            </div>
+            <select
+              value={kycType}
+              onChange={(e) => setKycType(e.target.value)}
+              className="w-full h-12 px-4 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm"
+            >
+              <option value="Farm Certification">Farm Certification</option>
+              <option value="Government ID">Government ID</option>
+              <option value="Business Permit">Business Permit</option>
+            </select>
+          </div>
 
           {/* Upload Area */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Upload Documents</label>
-            <button
-              type="button"
-              onClick={handleFakeUpload}
-              disabled={isUploading}
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Upload Verification Document</label>
+            <label
               className={cn(
-                "w-full h-36 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 transition-all",
-                isUploading
-                  ? "border-primary/40 bg-emerald-50/50"
-                  : "border-slate-200 bg-white hover:border-primary/40 hover:bg-emerald-50/30"
+                "w-full h-36 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer",
+                "border-slate-200 bg-white hover:border-primary/40 hover:bg-emerald-50/30"
               )}
             >
-              {isUploading ? (
-                <>
-                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  <p className="text-sm font-medium text-primary">Uploading...</p>
-                </>
-              ) : (
-                <>
-                  <UploadCloud size={28} className="text-slate-400" />
-                  <p className="text-sm font-medium text-slate-500">
-                    Click to upload <span className="text-primary font-bold">documents</span>
-                  </p>
-                  <p className="text-xs text-slate-400">Government ID, Business Permit, or Farm Cert</p>
-                </>
-              )}
-            </button>
+              <input 
+                type="file" 
+                className="hidden" 
+                accept=".jpg,.png,.pdf,.jpeg" 
+                onChange={handleFileChange} 
+              />
+              <UploadCloud size={28} className="text-slate-400" />
+              <p className="text-sm font-medium text-slate-500">
+                Click to upload <span className="text-primary font-bold">document</span>
+              </p>
+              <p className="text-xs text-slate-400">Government ID, Business Permit, or Farm Cert</p>
+            </label>
 
-            {/* Uploaded Files */}
-            {uploadedFiles.length > 0 && (
+            {/* Selected File */}
+            {kycDocument && (
               <div className="mt-3 space-y-2">
-                {uploadedFiles.map((file, i) => (
-                  <div key={i} className="flex items-center gap-3 bg-emerald-50 px-4 py-2.5 rounded-xl">
-                    <CheckCircle2 size={16} className="text-primary shrink-0" />
-                    <span className="text-sm font-medium text-slate-700 flex-1">{file}</span>
-                    <button onClick={() => removeFile(i)} className="text-slate-400 hover:text-red-500 transition-colors">
-                      <X size={16} />
-                    </button>
-                  </div>
-                ))}
+                <div className="flex items-center gap-3 bg-emerald-50 px-4 py-2.5 rounded-xl">
+                  <CheckCircle2 size={16} className="text-primary shrink-0" />
+                  <span className="text-sm font-medium text-slate-700 flex-1 truncate">{kycDocument.name}</span>
+                  <button onClick={removeFile} className="text-slate-400 hover:text-red-500 transition-colors">
+                    <X size={16} />
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -147,7 +167,7 @@ export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ isOpen, 
         {/* Actions */}
         <div className="flex gap-3 mt-8">
           <button
-            onClick={onClose}
+            onClick={handleModalClose}
             className="flex-1 h-12 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
           >
             Cancel

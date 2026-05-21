@@ -4,21 +4,35 @@ import React, { useState } from 'react';
 import { Modal, message } from 'antd';
 import { ShoppingBag, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const CATEGORIES = [
-  "Organic", "Fruits", "Grains", "Tubers", "Vegetables", "Dairy Products",
-  "Wholesale", "Livestock", "Fertilizers", "Equipements", "Seeds", "Hydroponics", "Spices & Herbs"
-];
+import { useQuery } from '@tanstack/react-query';
+import { categoriesApi } from '@/services/api/categories.api';
 
 interface BuyerProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   onComplete: (categories: string[]) => void;
+  isSubmitting?: boolean;
 }
 
-export const BuyerProfileModal: React.FC<BuyerProfileModalProps> = ({ isOpen, onClose, onComplete }) => {
+export const BuyerProfileModal: React.FC<BuyerProfileModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onComplete,
+  isSubmitting = false
+}) => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch meta categories dynamically
+  const { data: categoriesData } = useQuery({
+    queryKey: ['categories'],
+    queryFn: categoriesApi.getCategories,
+    staleTime: 60 * 60 * 1000,
+  });
+
+  const categories = categoriesData?.map((c: any) => c.name) || [
+    "Organic", "Fruits", "Grains", "Tubers", "Vegetables", "Dairy Products",
+    "Wholesale", "Livestock", "Fertilizers", "Equipements", "Seeds", "Hydroponics", "Spices & Herbs"
+  ];
 
   const toggleCategory = (cat: string) => {
     setSelectedCategories(prev =>
@@ -31,21 +45,19 @@ export const BuyerProfileModal: React.FC<BuyerProfileModalProps> = ({ isOpen, on
       message.error('Please select at least one category.');
       return;
     }
+    onComplete(selectedCategories);
+  };
 
-    setIsSubmitting(true);
-    setTimeout(() => {
-      onComplete(selectedCategories);
-      setIsSubmitting(false);
-      setSelectedCategories([]);
-      message.success('Buyer profile completed! Enjoy your personalized experience.');
-    }, 800);
+  const handleModalClose = () => {
+    setSelectedCategories([]);
+    onClose();
   };
 
   return (
     <Modal
       title={null}
       open={isOpen}
-      onCancel={onClose}
+      onCancel={handleModalClose}
       footer={null}
       width={520}
       centered
@@ -64,14 +76,14 @@ export const BuyerProfileModal: React.FC<BuyerProfileModalProps> = ({ isOpen, on
               <p className="text-xs text-slate-500">Select the categories you care about most</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+          <button onClick={handleModalClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
             <X size={20} className="text-slate-400" />
           </button>
         </div>
 
         {/* Categories */}
         <div className="flex flex-wrap gap-3 pt-2">
-          {CATEGORIES.map(cat => (
+          {categories.map(cat => (
             <button
               key={cat}
               onClick={() => toggleCategory(cat)}
@@ -96,7 +108,7 @@ export const BuyerProfileModal: React.FC<BuyerProfileModalProps> = ({ isOpen, on
         {/* Actions */}
         <div className="flex gap-3 mt-8">
           <button
-            onClick={onClose}
+            onClick={handleModalClose}
             className="flex-1 h-12 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
           >
             Cancel

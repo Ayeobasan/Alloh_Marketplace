@@ -5,9 +5,10 @@ interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;
   rightElement?: React.ReactNode;
+  leftElement?: React.ReactNode;
 }
 
-export const InputField: React.FC<InputFieldProps> = ({ label, error, rightElement, className, ...props }) => {
+export const InputField: React.FC<InputFieldProps> = ({ label, error, rightElement, leftElement, className, ...props }) => {
   return (
     <div className="space-y-2 w-full">
       <div className="flex items-center justify-between px-1">
@@ -15,11 +16,17 @@ export const InputField: React.FC<InputFieldProps> = ({ label, error, rightEleme
         {error && <span className="text-[10px] text-red-500 font-bold">{error}</span>}
       </div>
       <div className="relative">
+        {leftElement && (
+          <div className="absolute left-4 top-1/2 -translate-y-1/2">
+            {leftElement}
+          </div>
+        )}
         <input 
           className={cn(
             "input-field",
             error ? "border-red-300 focus:border-red-500 focus:ring-red-500/10" : "bg-slate-50/50",
             rightElement && "pr-12",
+            leftElement && "pl-12",
             className
           )}
           {...props}

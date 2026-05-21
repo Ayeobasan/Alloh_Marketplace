@@ -1,52 +1,155 @@
+@layer theme, base, antd, components, utilities;
+
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Poppins", sans-serif;
-  
+  /* Reference Next.js font loader CSS variables */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-outfit), "Poppins", sans-serif;
+
   /* Brand Colors */
   --color-primary: #006C04;
   --color-secondary: #FAD8AE;
   --color-tertiary: #6B4F3F;
   --color-inactive: #868686;
   --color-text-secondary: #787878;
-  
+
   --color-background: #F9FAFB;
   --color-foreground: #111827;
-  
+
   --radius-2xl: 1.25rem;
   --radius-xl: 0.75rem;
-  
+
   --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
 }
 
 @layer base {
   * {
-    @apply border-slate-200;
+    box-sizing: border-box;
   }
+
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    background-color: #F9FAFB;
+    color: #111827;
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
-  h1, h2, h3, h4 {
-    @apply font-display font-semibold tracking-tight;
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-outfit), "Poppins", sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: inherit;
   }
 }
 
 /* Custom UI Components */
 @layer components {
   .btn-primary {
-    @apply bg-primary text-white px-6 py-4 rounded-xl font-bold transition-all active:scale-[0.98] shadow-md disabled:bg-inactive disabled:opacity-60 flex items-center justify-center gap-2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background-color: #006C04;
+    color: #ffffff;
+    padding: 1rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 700;
+    transition: all 0.15s ease;
+    box-shadow: 0 4px 6px -1px rgba(0, 108, 4, 0.2);
   }
-  
+
+  .btn-primary:active {
+    transform: scale(0.98);
+  }
+
+  .btn-primary:disabled {
+    background-color: #868686;
+    opacity: 0.6;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background-color: #005503;
+  }
+
   .btn-secondary {
-    @apply bg-secondary text-primary px-6 py-4 rounded-xl font-bold transition-all active:scale-[0.98];
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background-color: #FAD8AE;
+    color: #006C04;
+    padding: 1rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 700;
+    transition: all 0.15s ease;
+  }
+
+  .btn-secondary:active {
+    transform: scale(0.98);
+  }
+
+  .btn-secondary:hover {
+    background-color: #f7c98a;
   }
 
   .input-field {
-    @apply w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm placeholder:text-slate-400;
+    width: 100%;
+    padding: 0.875rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid #e2e8f0;
+    background-color: #ffffff;
+    font-size: 0.875rem;
+    color: #111827;
+    transition: all 0.15s ease;
+  }
+
+  .input-field::placeholder {
+    color: #94a3b8;
+  }
+
+  .input-field:focus {
+    outline: none;
+    border-color: #006C04;
+    box-shadow: 0 0 0 3px rgba(0, 108, 4, 0.1);
   }
 
   .card-premium {
-    @apply bg-white rounded-2xl border border-slate-100 shadow-soft p-6 transition-all;
+    background-color: #ffffff;
+    border-radius: 1rem;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    transition: all 0.15s ease;
   }
+}
+
+/* Ant Design Select overrides — demands/create and filter sidebar */
+.custom-select .ant-select-selector {
+  border-radius: 0.75rem !important;
+  border-color: #e2e8f0 !important;
+  height: 50px !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 0 1rem !important;
+  box-shadow: none !important;
+}
+
+.custom-select.ant-select-focused .ant-select-selector,
+.custom-select .ant-select-selector:hover {
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
+}
+
+.custom-select .ant-select-selection-placeholder,
+.custom-select .ant-select-selection-item {
+  line-height: 50px !important;
 }

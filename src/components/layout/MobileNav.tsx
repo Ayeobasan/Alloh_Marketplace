@@ -3,13 +3,13 @@
 import React from 'react';
 import { Search, Bookmark, PlusCircle, User, LayoutGrid } from 'lucide-react';
 import { usePathname } from 'next/navigation';
-import { useMarketStore } from '@/store/useMarketStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import Link from 'next/link';
 import clsx from 'clsx';
 
 export const MobileNav = () => {
   const pathname = usePathname();
-  const { activeRole } = useMarketStore();
+  const { role: activeRole } = useAuthStore();
   
   const isSeller = activeRole === 'seller';
 

@@ -1,15 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
-import { useMarketStore } from '@/store/useMarketStore';
-import { ArrowLeft, ImagePlus, X, Loader2 } from 'lucide-react';
-import { Select, message } from 'antd';
+import { useAuthStore } from '@/store/useAuthStore';
+import { ArrowLeft, ImagePlus, X, Loader2, Clock } from 'lucide-react';
+import { message } from 'antd';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import Link from 'next/link';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { demandsApi } from '@/services/api/demands.api';
+import { statesApi } from '@/services/api/states.api';
+import { usersApi } from '@/services/api/users.api';
 
 const demandSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters').max(100),
@@ -29,22 +33,52 @@ type DemandFormValues = z.infer<typeof demandSchema>;
 
 const NIGERIAN_STATES = [
   'Lagos', 'Kano', 'Kaduna', 'Rivers', 'Oyo', 'Ogun', 'Abuja', 'Enugu', 'Anambra'
-]; // Truncated for brevity
+];
 
 export default function CreateDemand() {
   const router = useRouter();
-  const { addDemand, currentUser, activeRole } = useMarketStore();
+  const queryClient = useQueryClient();
+  const { user: currentUser, role: activeRole } = useAuthStore();
   const isSeller = activeRole === 'seller';
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { register, handleSubmit, control, formState: { errors } } = useForm<DemandFormValues>({
+  // Fetch fresh profile details from API
+  const { data: profile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: usersApi.getMe,
+    enabled: !!currentUser,
+  });
+
+  const kycStatus = profile?.kyc_status || profile?.kycStatus || currentUser?.kyc_status || currentUser?.kycStatus;
+  const isKycPending = kycStatus === 'pending';
+
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Fetch dynamic states
+  const { data: statesData = [] } = useQuery({
+    queryKey: ['states'],
+    queryFn: statesApi.getStates,
+    staleTime: 24 * 60 * 60 * 1000, // 24 hours
+  });
+
+  const states = statesData.length > 0
+    ? statesData
+    : NIGERIAN_STATES;
+
+  const { register, handleSubmit, control, setValue, formState: { errors } } = useForm<DemandFormValues>({
     resolver: zodResolver(demandSchema),
     defaultValues: {
       urgency: 'Medium',
       phone_number: currentUser?.phone || ''
     }
   });
+
+  // Prefill phone number if user updates
+  useEffect(() => {
+    if (currentUser?.phone) {
+      setValue('phone_number', currentUser.phone);
+    }
+  }, [currentUser, setValue]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -53,6 +87,7 @@ export default function CreateDemand() {
         message.error('Image must be less than 5MB');
         return;
       }
+      setSelectedFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -61,71 +96,103 @@ export default function CreateDemand() {
     }
   };
 
+  const createDemandMutation = useMutation({
+    mutationFn: (formData: FormData) => demandsApi.createDemand(formData),
+    onSuccess: () => {
+      message.success('Demand posted successfully!');
+      queryClient.invalidateQueries({ queryKey: ['demands'] });
+      router.push('/demands');
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to post demand';
+      message.error(errorMessage);
+    }
+  });
+
+  const isSubmitting = createDemandMutation.isPending;
+
   const onSubmit = (data: DemandFormValues) => {
-    if (!imagePreview) {
-      message.error('Please upload at least one image of the product or similar reference.');
+    if (isKycPending) {
+      message.error('Your KYC verification is currently pending under review.');
       return;
     }
 
-    setIsSubmitting(true);
+    if (!selectedFile) {
+      message.error('Please upload a product image.');
+      return;
+    }
 
-    // Simulate API call
-    setTimeout(() => {
-      const newDemand = {
-        id: `d-${Date.now()}`,
-        user_id: currentUser?.id || 'guest',
-        ...data,
-        budget_min: data.budget_min ? parseInt(data.budget_min) : undefined,
-        budget_max: data.budget_max ? parseInt(data.budget_max) : undefined,
-        images: [imagePreview],
-        status: 'Active' as const,
-        created_at: new Date().toISOString(),
-        user: currentUser || undefined
-      };
+    const payload = new FormData();
+    payload.append('title', data.title);
+    payload.append('product_name', data.product_name);
+    payload.append('quantity', data.quantity);
+    payload.append('unit', data.unit);
+    payload.append('state', data.state);
+    if (data.budget_min) payload.append('budget_min', data.budget_min);
+    if (data.budget_max) payload.append('budget_max', data.budget_max);
+    payload.append('description', data.description);
+    payload.append('phone_number', data.phone_number);
+    if (data.whatsapp_number) payload.append('whatsapp_number', data.whatsapp_number);
+    payload.append('urgency', data.urgency);
+    payload.append('images', selectedFile);
 
-      addDemand(newDemand);
-      message.success('Demand posted successfully!');
-      router.push('/demands');
-      setIsSubmitting(false);
-    }, 1500);
+    createDemandMutation.mutate(payload);
   };
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-slate-50 font-sans pb-10">
+      <div className="min-h-screen bg-[#F9FAFB] pb-12 font-sans">
+        {/* Header */}
         <header className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-slate-100 z-40">
-          <div className="px-6 h-16 flex items-center justify-between max-w-4xl mx-auto">
-            <Link href="/demands" className="md:hidden w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors">
+          <div className="px-6 py-4 flex items-center gap-4 max-w-3xl mx-auto">
+            <button
+              onClick={() => router.back()}
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors"
+            >
               <ArrowLeft size={20} />
-            </Link>
-            <h1 className="text-lg font-bold text-slate-900 md:hidden">{isSeller ? 'Post Goods' : 'Post a Demand'}</h1>
-            <div className="w-10 md:hidden"></div> {/* Spacer */}
+            </button>
+            <h1 className="text-xl font-bold text-slate-900">{isSeller ? 'Post Goods' : 'Post a Demand'}</h1>
           </div>
         </header>
 
-        <main className="max-w-4xl mx-auto px-6 py-8">
-          <div className="mb-8 hidden md:block">
-            <h1 className="text-3xl font-bold text-slate-900">{isSeller ? 'Post Goods' : 'Post a Demand'}</h1>
-            <p className="text-slate-500 mt-2 text-lg">{isSeller ? 'What do you have? Fill the details below to attract the right buyers.' : 'What do you need? Fill the details below to attract the right suppliers.'}</p>
-          </div>
-          
+        <main className="px-6 py-8 max-w-3xl mx-auto">
           <div className="mb-8 md:hidden">
             <h2 className="text-2xl font-bold text-slate-900">{isSeller ? 'What do you have?' : 'What do you need?'}</h2>
             <p className="text-slate-500 mt-1">{isSeller ? 'Fill the details below to attract the right buyers.' : 'Fill the details below to attract the right suppliers.'}</p>
           </div>
 
           <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 md:space-y-8">
-              
+            {isKycPending ? (
+              <div className="text-center py-12 flex flex-col items-center justify-center">
+                <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 mb-4 animate-pulse">
+                  <Clock size={32} />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">KYC Verification Pending</h3>
+                <p className="text-sm text-slate-500 max-w-md mx-auto mb-6 leading-relaxed">
+                  Your profile documents are currently under review by our admin team. You cannot create new posts until your account is fully verified.
+                </p>
+                <Link
+                  href="/profile"
+                  className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition-colors mt-2"
+                >
+                  View Profile Status
+                </Link>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 md:space-y-8">
+
               {/* Image Upload */}
               <div className="space-y-3">
                 <label className="block text-sm font-bold text-slate-900">Product Image <span className="text-red-500">*</span></label>
                 {imagePreview ? (
                   <div className="relative w-full h-48 md:h-64 rounded-2xl overflow-hidden border border-slate-200">
                     <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                    <button 
+                    <button
                       type="button"
-                      onClick={() => setImagePreview(null)}
+                      onClick={() => {
+                        setImagePreview(null);
+                        setSelectedFile(null);
+                      }}
                       className="absolute top-3 right-3 w-8 h-8 bg-black/50 backdrop-blur rounded-full flex items-center justify-center text-white hover:bg-black/70"
                     >
                       <X size={16} />
@@ -145,9 +212,9 @@ export default function CreateDemand() {
 
               <div className="space-y-3">
                 <label className="block text-sm font-bold text-slate-900">Post Title <span className="text-red-500">*</span></label>
-                <input 
-                  {...register('title')} 
-                  placeholder="e.g. Need 50 Bags of Dry Maize urgently" 
+                <input
+                  {...register('title')}
+                  placeholder="e.g. Need 50 Bags of Dry Maize urgently"
                   className="input-field"
                 />
                 {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
@@ -165,12 +232,15 @@ export default function CreateDemand() {
                     name="state"
                     control={control}
                     render={({ field }) => (
-                      <Select
+                      <select
                         {...field}
-                        className="w-full h-[50px] custom-select"
-                        placeholder="Select State"
-                        options={NIGERIAN_STATES.map(s => ({ value: s, label: s }))}
-                      />
+                        className="w-full h-[50px] bg-white border border-slate-200 rounded-xl px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm cursor-pointer"
+                      >
+                        <option value="" disabled>Select State</option>
+                        {states.map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
                     )}
                   />
                   {errors.state && <p className="text-red-500 text-xs mt-1">{errors.state.message}</p>}
@@ -189,18 +259,22 @@ export default function CreateDemand() {
                     name="unit"
                     control={control}
                     render={({ field }) => (
-                      <Select
+                      <select
                         {...field}
-                        className="w-full h-[50px] custom-select"
-                        placeholder="e.g. Bags"
-                        options={[
-                          { value: 'Bags', label: 'Bags' },
-                          { value: 'Tons', label: 'Tons' },
-                          { value: 'Kg', label: 'Kilograms (Kg)' },
-                          { value: 'Baskets', label: 'Baskets' },
-                          { value: 'Pieces', label: 'Pieces' },
-                        ]}
-                      />
+                        className="w-full h-[50px] bg-white border border-slate-200 rounded-xl px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm cursor-pointer"
+                      >
+                        <option value="" disabled>Select Unit</option>
+                        <option value="bags">Bags</option>
+                        <option value="tons">Tons</option>
+                        <option value="kg">Kilograms (Kg)</option>
+                        <option value="baskets">Baskets</option>
+                        <option value="liters">Liters</option>
+                        <option value="cartons">Cartons</option>
+                        <option value="crates">Crates</option>
+                        <option value="bundles">Bundles</option>
+                        <option value="pieces">Pieces</option>
+                        <option value="other">Other</option>
+                      </select>
                     )}
                   />
                   {errors.unit && <p className="text-red-500 text-xs mt-1">{errors.unit.message}</p>}
@@ -220,9 +294,9 @@ export default function CreateDemand() {
 
               <div className="space-y-3">
                 <label className="block text-sm font-bold text-slate-900">Description <span className="text-red-500">*</span></label>
-                <textarea 
-                  {...register('description')} 
-                  placeholder="Provide more details about the quality, variety, or delivery terms..." 
+                <textarea
+                  {...register('description')}
+                  placeholder="Provide more details about the quality, variety, or delivery terms..."
                   className="input-field min-h-[120px] resize-none"
                 />
                 {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
@@ -252,11 +326,10 @@ export default function CreateDemand() {
                           key={level}
                           type="button"
                           onClick={() => field.onChange(level)}
-                          className={`flex-1 py-3 px-4 md:px-0 rounded-xl border text-sm font-bold transition-all ${
-                            field.value === level 
-                              ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm' 
-                              : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
-                          }`}
+                          className={`flex-1 py-3 px-4 md:px-0 rounded-xl border text-sm font-bold transition-all ${field.value === level
+                            ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm'
+                            : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                            }`}
                         >
                           {level}
                         </button>
@@ -266,32 +339,17 @@ export default function CreateDemand() {
                 />
               </div>
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={isSubmitting}
                 className="w-full md:w-auto md:min-w-[200px] btn-primary h-14 text-lg"
               >
                 {isSubmitting ? <Loader2 className="animate-spin" /> : (isSeller ? 'Post Goods' : 'Post Demand')}
               </button>
             </form>
+            )}
           </div>
         </main>
-
-        <style jsx global>{`
-          .custom-select .ant-select-selector {
-            border-radius: 0.75rem !important;
-            border-color: #e2e8f0 !important;
-            height: 50px !important;
-            display: flex !important;
-            align-items: center !important;
-            padding: 0 1rem !important;
-            box-shadow: none !important;
-          }
-          .custom-select.ant-select-focused .ant-select-selector {
-            border-color: #10b981 !important;
-            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
-          }
-        `}</style>
       </div>
     </DashboardLayout>
   );

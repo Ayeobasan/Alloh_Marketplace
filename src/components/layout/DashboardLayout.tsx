@@ -2,15 +2,16 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useMarketStore } from '@/store/useMarketStore';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/useAuthStore';
 import { Search, Bookmark, PlusCircle, User, LayoutGrid, LogOut } from 'lucide-react';
 import clsx from 'clsx';
 import { MobileNav } from './MobileNav';
 
 export const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
-  const { activeRole } = useMarketStore();
+  const router = useRouter();
+  const { role: activeRole, clearCredentials } = useAuthStore();
   const isSeller = activeRole === 'seller';
 
   const navLinks = [
@@ -31,8 +32,8 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         </div>
 
         <div className="p-4 flex-1 flex flex-col gap-2 overflow-y-auto">
-          <Link 
-            href="/demands/create" 
+          <Link
+            href="/demands/create"
             className="flex items-center gap-3 px-4 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-colors mb-4 shadow-md shadow-emerald-200"
           >
             <PlusCircle size={20} />
@@ -40,18 +41,18 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
           </Link>
 
           <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-4 mt-2">Menu</div>
-          
+
           {navLinks.filter(link => !link.hidden).map((link) => {
             const Icon = link.icon;
             const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`);
             return (
-              <Link 
-                key={link.href} 
-                href={link.href} 
+              <Link
+                key={link.href}
+                href={link.href}
                 className={clsx(
                   "flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors",
-                  isActive 
-                    ? "bg-emerald-50 text-emerald-700" 
+                  isActive
+                    ? "bg-emerald-50 text-emerald-700"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 )}
               >
@@ -63,7 +64,13 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         </div>
 
         <div className="p-4 border-t border-slate-100">
-          <button className="flex items-center gap-3 px-4 py-3 w-full rounded-xl font-medium text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors">
+          <button
+            onClick={() => {
+              clearCredentials();
+              router.push('/login');
+            }}
+            className="flex items-center gap-3 px-4 py-3 w-full rounded-xl font-medium text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors"
+          >
             <LogOut size={20} className="text-slate-400" />
             Logout
           </button>

@@ -11,12 +11,27 @@ export interface User {
   avatar?: string;
   location?: string;
   created_at: string;
+  first_name?: string;
+  last_name?: string;
+  phone_number?: string;
   // Seller-specific fields
   farmName?: string;
+  farm_name?: string;
   experience?: string;
+  experience_years?: number | string;
   documents?: string[];
+  kycDocument?: string;
+  kyc_document?: string;
+  document?: string;
+  kyc_document_url?: string;
   // Buyer-specific fields
   selectedCategories?: string[];
+  categories?: string[];
+  // KYC fields
+  kyc_type?: string | null;
+  kycType?: string | null;
+  kyc_status?: 'pending' | 'approved' | 'rejected' | null;
+  kycStatus?: 'pending' | 'approved' | 'rejected' | null;
 }
 
 export interface DemandPost {

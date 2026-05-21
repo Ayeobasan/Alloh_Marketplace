@@ -1,50 +1,84 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DemandCard } from '@/components/ui/DemandCard';
-import { useMarketStore } from '@/store/useMarketStore';
-import { Search, SlidersHorizontal, ArrowLeft, MapPin, Clock } from 'lucide-react';
-import { Drawer, Button } from 'antd';
+import { useAuthStore } from '@/store/useAuthStore';
+import { Search, SlidersHorizontal, ArrowLeft, Loader2 } from 'lucide-react';
+import { Drawer } from 'antd';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
+import { demandsApi } from '@/services/api/demands.api';
+import { statesApi } from '@/services/api/states.api';
 
 export default function DemandsFeed() {
-  const { demands, activeRole } = useMarketStore();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
-  
-  // Filters
-  const [selectedState, setSelectedState] = useState<string>('All');
-  const [selectedUrgency, setSelectedUrgency] = useState<string>('All');
-  
-  // Unique states from data for filter
-  const states = useMemo(() => ['All', ...Array.from(new Set(demands.map(d => d.state)))], [demands]);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { role: activeRole } = useAuthStore();
 
-  const filteredDemands = useMemo(() => {
-    return demands.filter((demand) => {
-      const matchesSearch = demand.product_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            demand.title.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesState = selectedState === 'All' || demand.state === selectedState;
-      const matchesUrgency = selectedUrgency === 'All' || demand.urgency === selectedUrgency;
-      
-      return matchesSearch && matchesState && matchesUrgency;
-    });
-  }, [demands, searchQuery, selectedState, selectedUrgency]);
+  // Parse URL Search Parameters for State Synchronization
+  const searchQuery = searchParams.get('search') || '';
+  const selectedState = searchParams.get('state') || 'All';
+  const selectedUrgency = searchParams.get('urgency') || 'All';
+
+  // State Selector metadata query
+  const { data: statesData = [] } = useQuery({
+    queryKey: ['states'],
+    queryFn: statesApi.getStates,
+    staleTime: 24 * 60 * 60 * 1000, // 24 hours
+  });
+
+  const states = useMemo(() => {
+    return ['All', ...statesData];
+  }, [statesData]);
+
+  // Main Marketplace Demand Feed Query
+  const { data: demandsResponse, isLoading } = useQuery({
+    queryKey: ['demands', searchQuery, selectedState, selectedUrgency],
+    queryFn: () => demandsApi.getDemands({
+      search: searchQuery || undefined,
+      state: selectedState === 'All' ? undefined : selectedState,
+      urgency: selectedUrgency === 'All' ? undefined : selectedUrgency,
+    }),
+  });
+
+  const demands = demandsResponse?.demands || [];
+
+  const [filterDrawerOpen, setFilterDrawerOpen] = React.useState(false);
+
+  const setFilter = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === 'All' || !value) {
+      params.delete(key);
+    } else {
+      params.set(key, value);
+    }
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFilter('search', e.target.value);
+  };
 
   const clearFilters = () => {
-    setSelectedState('All');
-    setSelectedUrgency('All');
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('state');
+    params.delete('urgency');
+    params.delete('search');
+    router.push(`${pathname}?${params.toString()}`);
   };
 
   const FilterContent = () => (
     <div className="space-y-6">
       <div>
         <h3 className="text-sm font-bold text-slate-900 mb-3">Location</h3>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-2">
           {states.map(state => (
             <button
               key={state}
-              onClick={() => setSelectedState(state)}
+              onClick={() => setFilter('state', state)}
               className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
                 selectedState === state 
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
@@ -63,7 +97,7 @@ export default function DemandsFeed() {
           {['All', 'Emergency', 'High', 'Medium', 'Low'].map(urgency => (
             <button
               key={urgency}
-              onClick={() => setSelectedUrgency(urgency)}
+              onClick={() => setFilter('urgency', urgency)}
               className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
                 selectedUrgency === urgency 
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
@@ -76,14 +110,13 @@ export default function DemandsFeed() {
         </div>
       </div>
       
-      {(selectedState !== 'All' || selectedUrgency !== 'All') && (
-        <Button 
-          type="link" 
+      {(selectedState !== 'All' || selectedUrgency !== 'All' || searchQuery !== '') && (
+        <button 
           onClick={clearFilters} 
-          className="text-slate-500 hover:text-emerald-600 px-0 font-bold"
+          className="text-slate-500 hover:text-emerald-600 px-0 font-bold transition-colors text-sm cursor-pointer"
         >
           Clear Filters
-        </Button>
+        </button>
       )}
     </div>
   );
@@ -123,12 +156,12 @@ export default function DemandsFeed() {
                   placeholder="Search products, crops..."
                   className="w-full bg-white border border-slate-200 rounded-2xl py-3 pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={handleSearchChange}
                 />
               </div>
               <button 
                 onClick={() => setFilterDrawerOpen(true)}
-                className="lg:hidden w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-600 shadow-sm relative"
+                className="lg:hidden w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-600 shadow-sm relative cursor-pointer"
               >
                 <SlidersHorizontal size={18} />
                 {(selectedState !== 'All' || selectedUrgency !== 'All') && (
@@ -137,26 +170,42 @@ export default function DemandsFeed() {
               </button>
             </div>
 
-            {filteredDemands.length === 0 ? (
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="card-premium h-80 animate-pulse bg-slate-50 flex flex-col p-0 overflow-hidden">
+                    <div className="h-48 bg-slate-200/80 w-full" />
+                    <div className="p-5 flex-1 space-y-3">
+                      <div className="h-5 bg-slate-200/80 rounded w-3/4" />
+                      <div className="h-4 bg-slate-200/80 rounded w-1/2" />
+                      <div className="h-4 bg-slate-200/80 rounded w-5/6" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : demands.length === 0 ? (
               <div className="text-center py-20 bg-white rounded-3xl border border-slate-100">
                 <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Search className="text-slate-400" size={32} />
                 </div>
                 <h2 className="text-lg font-bold text-slate-900 mb-2">No demands found</h2>
                 <p className="text-slate-500 text-sm">Try adjusting your filters or search query.</p>
-                <Button type="link" onClick={clearFilters} className="mt-4 text-emerald-600 font-bold">
+                <button 
+                  onClick={clearFilters} 
+                  className="mt-4 text-emerald-600 font-bold hover:text-emerald-700 transition-colors cursor-pointer text-sm"
+                >
                   Clear all filters
-                </Button>
+                </button>
               </div>
             ) : (
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-sm font-medium text-slate-500">
-                    Showing <span className="text-slate-900 font-bold">{filteredDemands.length}</span> results
+                    Showing <span className="text-slate-900 font-bold">{demands.length}</span> results
                   </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filteredDemands.map((demand) => (
+                  {demands.map((demand) => (
                     <DemandCard key={demand.id} demand={demand} />
                   ))}
                 </div>
@@ -187,13 +236,12 @@ export default function DemandsFeed() {
         className="rounded-t-3xl font-sans lg:hidden"
       >
         <FilterContent />
-        <Button 
-          type="primary" 
-          className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-base font-bold shadow-md mt-6"
+        <button 
+          className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-base font-bold shadow-md mt-6 transition-colors cursor-pointer"
           onClick={() => setFilterDrawerOpen(false)}
         >
           Apply Filters
-        </Button>
+        </button>
       </Drawer>
     </DashboardLayout>
   );
