@@ -10,6 +10,7 @@ interface MarketState {
   // Actions
   setActiveRole: (role: UserRole) => void;
   setCurrentUser: (user: User) => void;
+  updateCurrentUser: (data: Partial<User>) => void;
   addDemand: (demand: DemandPost) => void;
   toggleSaveDemand: (demandId: string) => void;
   deleteDemand: (demandId: string) => void;
@@ -110,6 +111,10 @@ export const useMarketStore = create<MarketState>((set) => ({
   })),
   
   setCurrentUser: (user) => set({ currentUser: user }),
+  
+  updateCurrentUser: (data) => set((state) => ({
+    currentUser: state.currentUser ? { ...state.currentUser, ...data } : null
+  })),
   
   addDemand: (demand) => set((state) => ({ 
     demands: [demand, ...state.demands] 

@@ -4,12 +4,15 @@ import React from 'react';
 import { useMarketStore } from '@/store/useMarketStore';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DemandCard } from '@/components/ui/DemandCard';
-import { User, MapPin, Calendar, Settings, LogOut, CheckCircle2 } from 'lucide-react';
-import { Select } from 'antd';
+import { User, MapPin, Calendar, Settings, LogOut, CheckCircle2, ArrowLeftRight } from 'lucide-react';
+import { SellerProfileModal } from '@/components/ui/SellerProfileModal';
+import { BuyerProfileModal } from '@/components/ui/BuyerProfileModal';
 
 export default function Profile() {
-  const { currentUser, activeRole, setActiveRole, demands, savedDemandIds } = useMarketStore();
+  const { currentUser, activeRole, setActiveRole, updateCurrentUser, demands, savedDemandIds } = useMarketStore();
   const [activeTab, setActiveTab] = React.useState<'posted' | 'saved'>('posted');
+  const [showSellerModal, setShowSellerModal] = React.useState(false);
+  const [showBuyerModal, setShowBuyerModal] = React.useState(false);
 
   if (!currentUser) return null;
 
@@ -18,6 +21,36 @@ export default function Profile() {
   
   // For Seller: show saved demands
   const savedDemands = demands.filter(d => savedDemandIds.includes(d.id));
+
+  const handleSwitchToSeller = () => {
+    // If user already has seller info, switch directly
+    if (currentUser.farmName) {
+      setActiveRole('seller');
+    } else {
+      setShowSellerModal(true);
+    }
+  };
+
+  const handleSwitchToBuyer = () => {
+    // If user already has buyer categories, switch directly
+    if (currentUser.selectedCategories && currentUser.selectedCategories.length > 0) {
+      setActiveRole('buyer');
+    } else {
+      setShowBuyerModal(true);
+    }
+  };
+
+  const handleSellerProfileComplete = (data: { farmName: string; experience: string; documents: string[] }) => {
+    updateCurrentUser({ farmName: data.farmName, experience: data.experience, documents: data.documents });
+    setActiveRole('seller');
+    setShowSellerModal(false);
+  };
+
+  const handleBuyerProfileComplete = (categories: string[]) => {
+    updateCurrentUser({ selectedCategories: categories });
+    setActiveRole('buyer');
+    setShowBuyerModal(false);
+  };
 
   return (
     <DashboardLayout>
@@ -33,7 +66,7 @@ export default function Profile() {
 
         <main className="max-w-5xl mx-auto px-6 -mt-16">
           {/* Profile Card */}
-          <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100 mb-8 flex flex-col md:flex-row items-center md:items-start gap-6">
+          <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100 mb-8 flex flex-col md:flex-row items-center gap-6">
             <div className="w-24 h-24 md:w-32 md:h-32 shrink-0 bg-emerald-100 rounded-full border-4 border-white shadow-md flex items-center justify-center text-emerald-600 text-3xl md:text-4xl font-bold relative">
               {currentUser.avatar ? (
                 <img src={currentUser.avatar} alt={currentUser.fullname} className="w-full h-full rounded-full object-cover" />
@@ -63,18 +96,25 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* Test Toggle for MVP */}
-            <div className="w-full md:w-64 pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-slate-100 md:pl-6 text-left">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">MVP Test Controls</label>
-              <Select 
-                value={activeRole} 
-                onChange={(val) => setActiveRole(val as any)}
-                className="w-full custom-select"
-                options={[
-                  { value: 'buyer', label: 'View as Buyer' },
-                  { value: 'seller', label: 'View as Seller' }
-                ]}
-              />
+            {/* Role Switch Button */}
+            <div className="w-full md:w-auto pt-4 md:pt-0 border-t md:border-t-0 border-slate-100 md:shrink-0 md:self-center">
+              {activeRole === 'buyer' ? (
+                <button
+                  onClick={handleSwitchToSeller}
+                  className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-bold hover:bg-emerald-100 transition-colors"
+                >
+                  <ArrowLeftRight size={16} />
+                  Switch to Seller
+                </button>
+              ) : (
+                <button
+                  onClick={handleSwitchToBuyer}
+                  className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-bold hover:bg-emerald-100 transition-colors"
+                >
+                  <ArrowLeftRight size={16} />
+                  Switch to Buyer
+                </button>
+              )}
             </div>
           </div>
 
@@ -105,7 +145,7 @@ export default function Profile() {
                   ))
                 ) : (
                   <div className="col-span-full text-center py-12 bg-white rounded-2xl border border-slate-100 border-dashed">
-                    <p className="text-slate-500 mb-4">You haven't posted any demands yet.</p>
+                    <p className="text-slate-500 mb-4">You haven&apos;t posted any demands yet.</p>
                     <a href="/demands/create" className="text-emerald-600 font-bold hover:underline">Create your first post</a>
                   </div>
                 )
@@ -116,7 +156,7 @@ export default function Profile() {
                   ))
                 ) : (
                   <div className="col-span-full text-center py-12 bg-white rounded-2xl border border-slate-100 border-dashed">
-                    <p className="text-slate-500 mb-4">You haven't saved any listings yet.</p>
+                    <p className="text-slate-500 mb-4">You haven&apos;t saved any listings yet.</p>
                     <a href="/demands" className="text-emerald-600 font-bold hover:underline">Browse demands</a>
                   </div>
                 )
@@ -130,15 +170,17 @@ export default function Profile() {
           </button>
         </main>
 
-        <style jsx global>{`
-          .custom-select .ant-select-selector {
-            border-radius: 0.75rem !important;
-            border-color: #e2e8f0 !important;
-            height: 44px !important;
-            display: flex !important;
-            align-items: center !important;
-          }
-        `}</style>
+        {/* Modals */}
+        <SellerProfileModal
+          isOpen={showSellerModal}
+          onClose={() => setShowSellerModal(false)}
+          onComplete={handleSellerProfileComplete}
+        />
+        <BuyerProfileModal
+          isOpen={showBuyerModal}
+          onClose={() => setShowBuyerModal(false)}
+          onComplete={handleBuyerProfileComplete}
+        />
       </div>
     </DashboardLayout>
   );

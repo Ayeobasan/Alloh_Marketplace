@@ -13,15 +13,15 @@ export const Stepper: React.FC<StepperProps> = ({ currentStep, steps, subStepPro
   const totalProgress = ((currentStep - 1 + subStepProgress) / (steps.length - 1)) * 100;
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-8">
-      <div className="relative flex justify-between">
+    <div className="w-full max-w-4xl mx-auto px-1 sm:px-4 py-8">
+      <div className="relative flex justify-between items-end w-full">
         {/* Progress Line Background */}
-        <div className="absolute top-1/2 left-0 w-full h-[2px] bg-slate-200 -translate-y-1/2 z-0" />
+        <div className="absolute bottom-[7px] left-2 right-2 h-[2px] bg-[#D9D9D9] z-0" />
         
         {/* Active Progress Line */}
         <div 
-          className="absolute top-1/2 left-0 h-[2px] bg-primary transition-all duration-700 ease-in-out -translate-y-1/2 z-0" 
-          style={{ width: `${Math.min(totalProgress, 100)}%` }}
+          className="absolute bottom-[7px] left-2 h-[2px] bg-primary transition-all duration-700 ease-in-out z-0" 
+          style={{ width: `calc((100% - 16px) * ${Math.min(totalProgress, 100) / 100})` }}
         />
 
         {steps.map((step, index) => {
@@ -31,26 +31,34 @@ export const Stepper: React.FC<StepperProps> = ({ currentStep, steps, subStepPro
           const isActive = stepNumber <= currentStep;
 
           return (
-            <div key={step} className="relative z-10 flex flex-col items-center gap-3">
+            <div key={step} className={cn(
+              "relative z-10 flex flex-col gap-2 w-1/4",
+              index === 0 ? "items-start" : index === steps.length - 1 ? "items-end" : "items-center"
+            )}>
               <div className={cn(
-                "text-[10px] font-bold uppercase tracking-widest hidden sm:block transition-colors",
-                isActive ? "text-primary" : "text-slate-400"
+                "flex flex-col",
+                index === 0 ? "items-start text-left" : index === steps.length - 1 ? "items-end text-right" : "items-center text-center"
               )}>
-                Step {stepNumber}
+                <div className={cn(
+                  "hidden sm:block text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-colors mb-1",
+                  isActive ? "text-primary" : "text-inactive"
+                )}>
+                  Step {stepNumber}
+                </div>
+                <div className={cn(
+                  "text-[9px] sm:text-sm md:text-base font-bold transition-colors leading-tight px-0.5",
+                  isActive ? "text-primary" : "text-inactive",
+                  "sm:whitespace-nowrap"
+                )}>
+                  {step}
+                </div>
               </div>
               <div 
                 className={cn(
-                  "w-4 h-4 rounded-full border-4 transition-all duration-300",
-                  isActive ? "bg-primary border-white ring-2 ring-primary/20" : "bg-slate-200 border-white",
-                  isCurrent && "scale-125"
+                  "w-4 h-4 rounded-full transition-colors duration-300 relative shrink-0",
+                  isActive ? "bg-primary" : "bg-[#D9D9D9]"
                 )} 
               />
-              <div className={cn(
-                "text-[10px] sm:text-xs font-semibold whitespace-nowrap transition-colors",
-                isActive ? "text-primary" : "text-slate-400"
-              )}>
-                {step}
-              </div>
             </div>
           );
         })}

@@ -11,6 +11,12 @@ export interface User {
   avatar?: string;
   location?: string;
   created_at: string;
+  // Seller-specific fields
+  farmName?: string;
+  experience?: string;
+  documents?: string[];
+  // Buyer-specific fields
+  selectedCategories?: string[];
 }
 
 export interface DemandPost {
