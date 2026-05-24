@@ -2,7 +2,9 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/store/useAuthStore';
 
 // Centralized API Base URL from environment
-const baseURL = process.env.NEXT_PUBLIC_API_URL || 'https://allohbackend.onrender.com/api/v1';
+const baseURL = typeof window !== 'undefined'
+  ? '/api/proxy'
+  : (process.env.API_BASE_URL || 'https://allohbackend.onrender.com/api/v1');
 
 export const apiClient = axios.create({
   baseURL,
