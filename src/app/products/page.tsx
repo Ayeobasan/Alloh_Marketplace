@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { ProductCard, ProductCardSkeleton } from '@/components/ui/ProductCard';
@@ -13,7 +13,7 @@ import { useProducts } from '@/features/products/hooks/useProducts';
 import { statesApi } from '@/services/api/states.api';
 import { categoriesApi } from '@/services/api/categories.api';
 
-export default function ProductsFeed() {
+function ProductsFeed() {
   const router = useRouter();
   const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null);
   const [isSticky, setIsSticky] = useState(false);
@@ -284,5 +284,19 @@ export default function ProductsFeed() {
         </Drawer>
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <Loader2 className="animate-spin text-emerald-600" size={32} />
+        </div>
+      </DashboardLayout>
+    }>
+      <ProductsFeed />
+    </Suspense>
   );
 }

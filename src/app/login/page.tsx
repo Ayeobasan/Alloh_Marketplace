@@ -1,12 +1,12 @@
 "use client"
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthHeader } from '@/components/layout/AuthHeader';
 import { AuthFooter } from '@/components/layout/AuthFooter';
 import { InputField } from '@/components/shared/InputField';
 import { cn } from '@/lib/utils';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,7 +22,7 @@ const loginSchema = z.object({
 
 type LoginInput = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setCredentials, setRole: setStoreRole } = useAuthStore();
@@ -147,5 +147,17 @@ export default function LoginPage() {
 
       <AuthFooter />
     </div>
+  );
+}
+
+export default function LoginPageWithSuspense() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="animate-spin text-emerald-600" size={32} />
+      </div>
+    }>
+      <LoginPage />
+    </Suspense>
   );
 }
