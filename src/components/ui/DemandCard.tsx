@@ -1,12 +1,15 @@
 import React from 'react';
 import { DemandPost } from '@/types';
-import { MapPin, Clock, Phone, Bookmark, BookmarkCheck } from 'lucide-react';
-import { useMarketStore } from '@/store/useMarketStore';
+import { MapPin, Clock, Phone, Bookmark, BookmarkCheck, Edit, Trash2 } from 'lucide-react';
+import { useAuthStore } from '@/store/useAuthStore';
 import Link from 'next/link';
 
 interface DemandCardProps {
   demand: DemandPost;
   hideActions?: boolean;
+  showEditDelete?: boolean;
+  onEdit?: (demand: DemandPost) => void;
+  onDelete?: (demand: DemandPost) => void;
 }
 
 const getUrgencyColor = (urgency: string) => {
@@ -28,8 +31,14 @@ const formatTimeAgo = (dateString: string) => {
   return `${Math.floor(diffInHours / 24)}d ago`;
 };
 
-export const DemandCard: React.FC<DemandCardProps> = ({ demand, hideActions }) => {
-  const { savedDemandIds, toggleSaveDemand, activeRole } = useMarketStore();
+export const DemandCard: React.FC<DemandCardProps> = ({ 
+  demand, 
+  hideActions, 
+  showEditDelete = false, 
+  onEdit, 
+  onDelete 
+}) => {
+  const { savedDemandIds, toggleSaveDemand, role: activeRole } = useAuthStore();
   const isSaved = savedDemandIds.includes(demand.id);
   const isSeller = activeRole === 'seller';
 
@@ -95,6 +104,31 @@ export const DemandCard: React.FC<DemandCardProps> = ({ demand, hideActions }) =
                 <Phone size={18} />
               </a>
             )}
+          </div>
+        )}
+
+        {showEditDelete && (
+          <div className="pt-4 border-t border-slate-100 flex gap-3">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                onEdit?.(demand);
+              }}
+              className="flex-1 h-12 bg-emerald-50 text-emerald-700 rounded-xl hover:bg-emerald-100 transition-colors flex items-center justify-center gap-1.5 font-bold text-sm"
+            >
+              <Edit size={16} />
+              Edit
+            </button>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                onDelete?.(demand);
+              }}
+              className="px-4 h-12 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors flex items-center justify-center gap-1.5 font-bold text-sm"
+            >
+              <Trash2 size={16} />
+              Delete
+            </button>
           </div>
         )}
       </div>

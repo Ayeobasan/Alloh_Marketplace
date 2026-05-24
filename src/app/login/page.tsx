@@ -1,24 +1,63 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthHeader } from '@/components/layout/AuthHeader';
 import { AuthFooter } from '@/components/layout/AuthFooter';
 import { InputField } from '@/components/shared/InputField';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff } from 'lucide-react';
-import { useMarketStore } from '@/store/useMarketStore';
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation } from '@tanstack/react-query';
+import { authApi } from '@/services/api/auth.api';
+import { useAuthStore } from '@/store/useAuthStore';
+import { message } from '@/components/ui/message';
+
+const loginSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
+type LoginInput = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setActiveRole } = useMarketStore();
+  const searchParams = useSearchParams();
+  const { setCredentials, setRole: setStoreRole } = useAuthStore();
   const [role, setRole] = useState<'buyer' | 'seller'>('buyer');
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setActiveRole(role);
-    router.push('/demands');
+  useEffect(() => {
+    const roleParam = searchParams.get('role') || (typeof window !== 'undefined' ? sessionStorage.getItem('switching_role') : null);
+    if (roleParam === 'buyer' || roleParam === 'seller') {
+      setRole(roleParam);
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('switching_role');
+      }
+    }
+  }, [searchParams]);
+
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const mutation = useMutation({
+    mutationFn: (data: LoginInput & { role: 'buyer' | 'seller' }) => authApi.login(data),
+    onSuccess: (data) => {
+      setCredentials(data);
+      setStoreRole(role);
+      message.success('Welcome back to Alloh!');
+      router.push(role === 'seller' ? '/demands' : '/products');
+    },
+    onError: (error: any) => {
+      message.error(error.message || 'Login failed. Please check your credentials.');
+    },
+  });
+
+  const onSubmit = (data: LoginInput) => {
+    mutation.mutate({ ...data, role });
   };
 
   return (
@@ -48,17 +87,21 @@ export default function LoginPage() {
             <span className={cn("text-xs font-bold transition-colors", role === 'seller' ? "text-primary" : "text-slate-300 uppercase tracking-widest")}>Seller</span>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <InputField
               label="Email Address"
               type="email"
               placeholder="name@example.com"
+              error={errors.email?.message}
+              {...register('email')}
             />
 
             <InputField
               label="Password"
               type={showPassword ? "text" : "password"}
               placeholder="***********"
+              error={errors.password?.message}
+              {...register('password')}
               rightElement={
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-400 hover:text-slate-600 transition-colors">
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -71,11 +114,15 @@ export default function LoginPage() {
                 <input type="checkbox" id="remember" className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary" />
                 <label htmlFor="remember" className="text-sm font-medium text-slate-600">Remember me</label>
               </div>
-              <button type="button" className="text-sm font-bold text-primary hover:underline">Forgot Password?</button>
+              <Link href="/forgot-password" className="text-sm font-bold text-primary hover:underline">Forgot Password?</Link>
             </div>
 
-            <button type="submit" className="btn-primary w-full h-14 text-base shadow-lg shadow-primary/20">
-              Login
+            <button
+              type="submit"
+              disabled={mutation.isPending}
+              className="btn-primary w-full h-14 text-base shadow-lg shadow-primary/20 flex items-center justify-center"
+            >
+              {mutation.isPending ? 'Logging in...' : 'Login'}
             </button>
           </form>
 

@@ -1,15 +1,24 @@
 'use client';
 
 import React from 'react';
-import { useMarketStore } from '@/store/useMarketStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DemandCard } from '@/components/ui/DemandCard';
-import { Bookmark, ArrowLeft } from 'lucide-react';
+import { Bookmark, ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
+import { demandsApi } from '@/services/api/demands.api';
 
 export default function SavedDemands() {
-  const { demands, savedDemandIds, activeRole } = useMarketStore();
-  
+  const { savedDemandIds, role: activeRole } = useAuthStore();
+
+  const { data: demandsResponse, isLoading } = useQuery({
+    queryKey: ['demands'],
+    queryFn: () => demandsApi.getDemands(),
+    enabled: activeRole === 'seller',
+  });
+
+  const demands = demandsResponse?.demands || [];
   const savedDemands = demands.filter(d => savedDemandIds.includes(d.id));
 
   return (
@@ -38,6 +47,11 @@ export default function SavedDemands() {
               <p className="text-slate-500 text-sm max-w-xs mx-auto">
                 Only sellers can bookmark and save buyer demands. You are currently browsing as a Buyer.
               </p>
+            </div>
+          ) : isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-100">
+              <Loader2 className="animate-spin text-emerald-600 mb-4" size={40} />
+              <p className="text-slate-500 text-sm font-medium">Loading saved demands...</p>
             </div>
           ) : savedDemands.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-3xl border border-slate-100">
