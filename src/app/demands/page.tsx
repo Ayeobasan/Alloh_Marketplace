@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DemandCard } from '@/components/ui/DemandCard';
@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { demandsApi } from '@/services/api/demands.api';
 import { statesApi } from '@/services/api/states.api';
 
-export default function DemandsFeed() {
+function DemandsFeed() {
   const router = useRouter();
   const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null);
   const [isSticky, setIsSticky] = useState(false);
@@ -288,5 +288,19 @@ export default function DemandsFeed() {
         )}
       </Drawer>
     </DashboardLayout>
+  );
+}
+
+export default function DemandsPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <Loader2 className="animate-spin text-emerald-600" size={32} />
+        </div>
+      </DashboardLayout>
+    }>
+      <DemandsFeed />
+    </Suspense>
   );
 }
