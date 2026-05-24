@@ -11,14 +11,19 @@ import { MobileNav } from './MobileNav';
 export const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const { role: activeRole, clearCredentials } = useAuthStore();
+  const { activeRole, clearCredentials } = useAuthStore();
   const isSeller = activeRole === 'seller';
 
-  const navLinks = [
-    { href: '/demands', icon: Search, label: 'Browse Demands' },
-    { href: '/saved', icon: Bookmark, label: 'Saved Listings', hidden: !isSeller },
-    { href: '/profile', icon: User, label: 'Profile' },
-  ];
+  const navLinks = isSeller 
+    ? [
+        { href: '/demands', icon: Search, label: 'Browse Demands' },
+        { href: '/saved', icon: Bookmark, label: 'Saved Listings' },
+        { href: '/profile', icon: User, label: 'Profile' },
+      ]
+    : [
+        { href: '/products', icon: Search, label: 'Browse Products' },
+        { href: '/profile', icon: User, label: 'Profile' },
+      ];
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] md:flex font-sans">
@@ -33,7 +38,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
 
         <div className="p-4 flex-1 flex flex-col gap-2 overflow-y-auto">
           <Link
-            href="/demands/create"
+            href={isSeller ? '/products/create' : '/demands/create'}
             className="flex items-center gap-3 px-4 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-colors mb-4 shadow-md shadow-emerald-200"
           >
             <PlusCircle size={20} />
@@ -42,7 +47,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
 
           <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-4 mt-2">Menu</div>
 
-          {navLinks.filter(link => !link.hidden).map((link) => {
+          {navLinks.map((link) => {
             const Icon = link.icon;
             const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`);
             return (

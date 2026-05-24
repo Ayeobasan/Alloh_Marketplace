@@ -8,6 +8,7 @@ export interface User {
   email: string;
   phone: string;
   role: UserRole;
+  roles?: string[]; // Multiple roles supported dynamically
   avatar?: string;
   location?: string;
   created_at: string;
@@ -32,6 +33,61 @@ export interface User {
   kycType?: string | null;
   kyc_status?: 'pending' | 'approved' | 'rejected' | null;
   kycStatus?: 'pending' | 'approved' | 'rejected' | null;
+  kyc?: {
+    id: string;
+    status: 'pending' | 'approved' | 'rejected' | null;
+    kyc_type?: string | null;
+    rejection_reason?: string | null;
+    created_at?: string;
+    updated_at?: string;
+  } | null;
+}
+
+export interface Product {
+  id: string;
+  user_id: string;
+  category_id: string;
+  product_name: string;
+  price: number;
+  quantity: string;
+  unit: string;
+  state: string;
+  description: string;
+  images: string[];
+  status: 'Active' | 'Pending' | 'Rejected';
+  rejection_reason?: string | null;
+  created_at: string;
+  updated_at: string;
+  user?: User;
+}
+
+export interface ProductResponse {
+  success: boolean;
+  message: string;
+  data: Product;
+}
+
+export interface PaginatedProducts {
+  data: Product[];
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
+}
+
+export interface CreateProductPayload {
+  product_name: string;
+  category_id: string;
+  price: number;
+  quantity: string;
+  unit: string;
+  state: string;
+  description: string;
+  images: File[];
+}
+
+export interface UpdateProductPayload extends Partial<CreateProductPayload> {
+  status?: 'Active' | 'Pending' | 'Rejected';
 }
 
 export interface DemandPost {

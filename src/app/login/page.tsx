@@ -1,7 +1,7 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthHeader } from '@/components/layout/AuthHeader';
 import { AuthFooter } from '@/components/layout/AuthFooter';
 import { InputField } from '@/components/shared/InputField';
@@ -13,7 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { authApi } from '@/services/api/auth.api';
 import { useAuthStore } from '@/store/useAuthStore';
-import { message } from 'antd';
+import { message } from '@/components/ui/message';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
@@ -24,9 +24,20 @@ type LoginInput = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setCredentials, setRole: setStoreRole } = useAuthStore();
   const [role, setRole] = useState<'buyer' | 'seller'>('buyer');
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    const roleParam = searchParams.get('role') || (typeof window !== 'undefined' ? sessionStorage.getItem('switching_role') : null);
+    if (roleParam === 'buyer' || roleParam === 'seller') {
+      setRole(roleParam);
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('switching_role');
+      }
+    }
+  }, [searchParams]);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -38,7 +49,7 @@ export default function LoginPage() {
       setCredentials(data);
       setStoreRole(role);
       message.success('Welcome back to Alloh!');
-      router.push('/demands');
+      router.push(role === 'seller' ? '/demands' : '/products');
     },
     onError: (error: any) => {
       message.error(error.message || 'Login failed. Please check your credentials.');
@@ -103,7 +114,7 @@ export default function LoginPage() {
                 <input type="checkbox" id="remember" className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary" />
                 <label htmlFor="remember" className="text-sm font-medium text-slate-600">Remember me</label>
               </div>
-              <button type="button" className="text-sm font-bold text-primary hover:underline">Forgot Password?</button>
+              <Link href="/forgot-password" className="text-sm font-bold text-primary hover:underline">Forgot Password?</Link>
             </div>
 
             <button

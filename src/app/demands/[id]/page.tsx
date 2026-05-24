@@ -9,6 +9,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { demandsApi } from '@/services/api/demands.api';
+import { getKycStatus } from '@/utils/format';
 
 export default function DemandDetails() {
   const { id } = useParams();
@@ -218,7 +219,7 @@ export default function DemandDetails() {
                   <h3 className="font-bold text-slate-900 flex items-center gap-2">
                     {demand.user?.fullname || 'Anonymous Buyer'}
                     {(() => {
-                      const kycStatus = demand.user?.kyc_status || demand.user?.kycStatus;
+                      const kycStatus = getKycStatus(demand.user);
                       if (kycStatus === 'approved') {
                         return <ShieldCheck size={16} className="text-emerald-500 shrink-0" />;
                       }
@@ -233,7 +234,7 @@ export default function DemandDetails() {
                   </h3>
                   <p className="text-sm text-slate-500">
                     {(() => {
-                      const kycStatus = demand.user?.kyc_status || demand.user?.kycStatus;
+                      const kycStatus = getKycStatus(demand.user);
                       if (kycStatus === 'approved') return 'Verified Member';
                       if (kycStatus === 'pending') return 'KYC Pending Review';
                       if (kycStatus === 'rejected') return 'KYC Rejected';
@@ -271,7 +272,8 @@ export default function DemandDetails() {
       <ReportModal
         isOpen={reportModalOpen}
         onClose={() => setReportModalOpen(false)}
-        postId={demand.id}
+        contentId={demand.id}
+        contentType="demand"
       />
     </DashboardLayout>
   );

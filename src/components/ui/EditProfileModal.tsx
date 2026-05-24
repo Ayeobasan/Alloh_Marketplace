@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, message } from 'antd';
+import { Modal } from '@/components/ui/Modal';
+import { message } from '@/components/ui/message';
 import { User as UserIcon, MapPin, Phone, UploadCloud, X, Check, FileText, Lock } from 'lucide-react';
 import { InputField } from '@/components/shared/InputField';
 import { cn } from '@/lib/utils';
@@ -39,7 +40,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [phone, setPhone] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  
+
   // Seller-specific states
   const [farmName, setFarmName] = useState('');
   const [experience, setExperience] = useState('');
@@ -69,7 +70,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       // Split fullname into first_name and last_name if they are not explicitly present
       const first = user.first_name || user.fullname?.split(' ')[0] || '';
       const last = user.last_name || user.fullname?.split(' ').slice(1).join(' ') || '';
-      
+
       setFirstName(first);
       setLastName(last);
       setLocation(user.location || '');
@@ -83,14 +84,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       setKycType(user.kyc_type || user.kycType || '');
       setKycDocFile(null);
       setKycDocName(
-        user.documents?.[0] || 
-        (typeof user.kycDocument === 'string' ? user.kycDocument : '') || 
-        (typeof user.kyc_document === 'string' ? user.kyc_document : '') || 
-        (typeof user.document === 'string' ? user.document : '') || 
-        (typeof user.kyc_document_url === 'string' ? user.kyc_document_url : '') || 
+        user.documents?.[0] ||
+        (typeof user.kycDocument === 'string' ? user.kycDocument : '') ||
+        (typeof user.kyc_document === 'string' ? user.kyc_document : '') ||
+        (typeof user.document === 'string' ? user.document : '') ||
+        (typeof user.kyc_document_url === 'string' ? user.kyc_document_url : '') ||
         ''
       );
-      
+
       // Close dropdowns
       setIsOpenDropdown(false);
       setSearchQuery('');
@@ -155,10 +156,6 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         message.error('Experience is required.');
         return;
       }
-      if (!kycType) {
-        message.error('KYC type is required.');
-        return;
-      }
     }
 
     // Check if any fields actually changed compared to current user profile
@@ -170,13 +167,10 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     // Seller fields delta
     const origFarmName = user.farm_name || user.farmName || '';
     const origExperience = user.experience_years ? String(user.experience_years) : (user.experience ? String(user.experience) : '');
-    const origKycType = user.kyc_type || user.kycType || '';
 
     const hasSellerChanges = activeRole === 'seller' && (
       farmName.trim() !== origFarmName ||
-      experience.trim() !== origExperience ||
-      kycType !== origKycType ||
-      kycDocFile !== null
+      experience.trim() !== origExperience
     );
 
     const hasChanges =
@@ -210,12 +204,6 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       payload.append('farm_name', farmName.trim());
       payload.append('experience', experience.trim());
       payload.append('experience_years', experience.trim());
-      payload.append('kycType', kycType);
-      payload.append('kyc_type', kycType);
-
-      if (kycDocFile) {
-        payload.append('kycDocument', kycDocFile);
-      }
     }
 
     onSave(payload);
@@ -232,7 +220,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       className="font-sans"
       closable={false}
     >
-      <div className="py-2 max-h-[85vh] overflow-y-auto px-1 scrollbar-thin">
+      <div className="py-2 px-1">
         {/* Header */}
         <div className="flex items-center justify-between mb-6 sticky top-0 bg-white z-10 py-1 border-b border-slate-50">
           <div className="flex items-center gap-3">
@@ -264,7 +252,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 ) : (
                   firstName ? firstName.charAt(0) : 'U'
                 )}
-                
+
                 {/* Overlay on hover */}
                 <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
                   <UploadCloud size={20} />
@@ -272,16 +260,16 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 </div>
               </div>
             </div>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
-              accept="image/*" 
-              onChange={handleFileChange} 
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={handleFileChange}
             />
-            <button 
-              type="button" 
-              onClick={handleTriggerUpload} 
+            <button
+              type="button"
+              onClick={handleTriggerUpload}
               className="mt-3 text-xs font-bold text-primary hover:underline"
             >
               Upload New Photo
@@ -405,7 +393,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               </div>
 
               {/* KYC Document Type Select */}
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">KYC Document Type *</label>
                 <div className="relative">
                   <select
@@ -424,10 +412,10 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                     <Lock size={14} />
                   </div>
                 </div>
-              </div>
+              </div> */}
 
               {/* KYC Document Attachment */}
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">KYC Document Attachment</label>
                 <label className="flex items-center justify-between w-full h-[50px] bg-slate-100/70 border border-dashed border-slate-200 rounded-xl px-4 cursor-not-allowed opacity-65 transition-all">
                   <div className="flex items-center gap-2">
@@ -450,7 +438,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   />
                 </label>
                 <p className="text-[10px] text-slate-400">Verification documents cannot be edited once profile is completed.</p>
-              </div>
+              </div> */}
             </div>
           )}
 

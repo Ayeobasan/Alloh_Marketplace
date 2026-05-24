@@ -1,31 +1,46 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DemandCard } from '@/components/ui/DemandCard';
+import { ProductCard } from '@/components/ui/ProductCard';
 import { User, MapPin, Calendar, Settings, LogOut, CheckCircle2, ArrowLeftRight, Loader2, ShieldCheck, ShieldAlert, ShieldX, Clock } from 'lucide-react';
 import { SellerProfileModal } from '@/components/ui/SellerProfileModal';
 import { BuyerProfileModal } from '@/components/ui/BuyerProfileModal';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '@/services/api/users.api';
-import { demandsApi } from '@/services/api/demands.api';
-import { message, Modal } from 'antd';
+import { message } from '@/components/ui/message';
+import { Modal } from '@/components/ui/Modal';
 import { EditProfileModal } from '@/components/ui/EditProfileModal';
 import { EditDemandModal } from '@/components/ui/EditDemandModal';
-import { DemandPost } from '@/types';
+import { EditProductModal } from '@/components/ui/EditProductModal';
+import { useMarketplaceRole } from '@/hooks/useMarketplaceRole';
+import { useMyProducts } from '@/features/products/hooks/useMyProducts';
+import { useDeleteProduct } from '@/features/products/hooks/useDeleteProduct';
+import { useUpdateProduct } from '@/features/products/hooks/useUpdateProduct';
+import { useMyDemands } from '@/features/demands/hooks/useMyDemands';
+import { useDeleteDemand } from '@/features/demands/hooks/useDeleteDemand';
+import { useUpdateDemand } from '@/features/demands/hooks/useUpdateDemand';
+import { DemandPost, Product } from '@/types';
+import { getKycStatus } from '@/utils/format';
 
 export default function Profile() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user: currentUser, role: activeRole, setRole, updateUser, clearCredentials, isAuthenticated } = useAuthStore();
+  const { user: currentUser, updateUser, clearCredentials, isAuthenticated } = useAuthStore();
+  const { activeRole, switchRole } = useMarketplaceRole();
+
   const [activeTab, setActiveTab] = useState<'posted' | 'saved'>('posted');
   const [showSellerModal, setShowSellerModal] = useState(false);
   const [showBuyerModal, setShowBuyerModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showEditDemandModal, setShowEditDemandModal] = useState(false);
+  const [showEditProductModal, setShowEditProductModal] = useState(false);
   const [selectedDemandToEdit, setSelectedDemandToEdit] = useState<DemandPost | null>(null);
+  const [selectedProductToEdit, setSelectedProductToEdit] = useState<Product | null>(null);
 
   // Sync session authentication
   useEffect(() => {
@@ -41,12 +56,25 @@ export default function Profile() {
     enabled: isAuthenticated,
   });
 
+  // --- Buyer State & Hooks ---
   // Fetch posted demands (for Buyer view)
-  const { data: myDemands = [], isLoading: isDemandsLoading } = useQuery({
-    queryKey: ['my-demands'],
-    queryFn: demandsApi.getMyPosts,
-    enabled: isAuthenticated && activeRole === 'buyer',
-  });
+  const { data: myDemands = [], isLoading: isDemandsLoading } = useMyDemands(
+    isAuthenticated && activeRole === 'buyer'
+  );
+
+  const deleteDemandMutation = useDeleteDemand();
+  const updateDemandMutation = useUpdateDemand();
+
+  // --- Seller State & Hooks ---
+  // Fetch posted products (for Seller view)
+  const { data: myProductsResponse, isLoading: isProductsLoading } = useMyProducts(
+    { page: 1, limit: 50 },
+    isAuthenticated && activeRole === 'seller'
+  );
+  const myProducts = myProductsResponse?.data || [];
+
+  const deleteProductMutation = useDeleteProduct();
+  const updateProductMutation = useUpdateProduct();
 
   // Profile update mutation
   const profileMutation = useMutation({
@@ -62,14 +90,47 @@ export default function Profile() {
     },
   });
 
+  // Dedicated role switch mutation to sync with backend database
+  const switchRoleMutation = useMutation({
+    mutationFn: (newRole: 'buyer' | 'seller') => usersApi.updateProfile({ role: newRole }),
+    onSuccess: (updatedUser, newRole) => {
+      updateUser(updatedUser);
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      switchRole(newRole);
+
+      // Log out user to force re-authentication under the new role
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('switching_role', newRole);
+      }
+      clearCredentials();
+      message.success(`Marketplace role switched successfully. Please log back in as a ${newRole === 'seller' ? 'Seller' : 'Buyer'}.`);
+      router.push(`/login?role=${newRole}`);
+    },
+    onError: (error: any, newRole: 'buyer' | 'seller') => {
+      const errMsg = error.response?.data?.message || error.message || '';
+      if (errMsg.includes('No fields to update')) {
+        // Even if backend says "No fields to update", it means the role is already set correctly on the backend.
+        // We log them out so they can log back in as the new role.
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('switching_role', newRole);
+        }
+        clearCredentials();
+        message.success(`Marketplace role switched successfully. Please log back in as a ${newRole === 'seller' ? 'Seller' : 'Buyer'}.`);
+        router.push(`/login?role=${newRole}`);
+      } else {
+        message.error(errMsg || 'Failed to switch marketplace role.');
+      }
+    },
+  });
+
   // Seller profile setup mutation
   const setupSellerProfileMutation = useMutation({
     mutationFn: (payload: FormData) => usersApi.setupSellerProfile(payload),
     onSuccess: (updatedUser) => {
       updateUser(updatedUser);
-      setRole('seller');
       setShowSellerModal(false);
       queryClient.invalidateQueries({ queryKey: ['profile'] });
+      switchRole('seller');
       message.success('Seller profile completed! Switched to Seller Mode. KYC is under review.');
     },
     onError: (error: any) => {
@@ -77,32 +138,19 @@ export default function Profile() {
     },
   });
 
-  // Demand delete mutation
-  const deleteDemandMutation = useMutation({
-    mutationFn: (id: string) => demandsApi.deleteDemand(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-demands'] });
-      queryClient.invalidateQueries({ queryKey: ['demands'] });
-      message.success('Demand deleted successfully!');
+  // Buyer profile setup mutation
+  const setupBuyerProfileMutation = useMutation({
+    mutationFn: (payload: { categories: string[] }) => usersApi.setupBuyerProfile(payload),
+    onSuccess: (updatedUser) => {
+      updateUser(updatedUser);
+      setShowBuyerModal(false);
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      switchRole('buyer');
+      message.success('Buyer profile completed! Switched to Buyer Mode.');
     },
     onError: (error: any) => {
-      message.error(error.message || 'Failed to delete demand.');
-    }
-  });
-
-  // Demand update mutation
-  const updateDemandMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: FormData }) => demandsApi.updateDemand(id, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-demands'] });
-      queryClient.invalidateQueries({ queryKey: ['demands'] });
-      setShowEditDemandModal(false);
-      setSelectedDemandToEdit(null);
-      message.success('Demand updated successfully!');
+      message.error(error.message || 'Failed to complete buyer profile.');
     },
-    onError: (error: any) => {
-      message.error(error.message || 'Failed to update demand.');
-    }
   });
 
   const handleDeleteDemand = (demand: DemandPost) => {
@@ -113,7 +161,34 @@ export default function Profile() {
       okType: 'danger',
       cancelText: 'No, Cancel',
       onOk: () => {
-        deleteDemandMutation.mutate(demand.id);
+        deleteDemandMutation.mutate(demand.id, {
+          onSuccess: () => {
+            message.success('Demand deleted successfully!');
+          },
+          onError: (err: any) => {
+            message.error(err.message || 'Failed to delete demand.');
+          }
+        });
+      }
+    });
+  };
+
+  const handleDeleteProduct = (product: Product) => {
+    Modal.confirm({
+      title: 'Delete Product Listing',
+      content: `Are you sure you want to delete "${product.product_name}"? This action cannot be undone.`,
+      okText: 'Yes, Delete',
+      okType: 'danger',
+      cancelText: 'No, Cancel',
+      onOk: () => {
+        deleteProductMutation.mutate(product.id, {
+          onSuccess: () => {
+            message.success('Product deleted successfully!');
+          },
+          onError: (err: any) => {
+            message.error(err.message || 'Failed to delete product.');
+          }
+        });
       }
     });
   };
@@ -121,6 +196,11 @@ export default function Profile() {
   const handleEditDemandClick = (demand: DemandPost) => {
     setSelectedDemandToEdit(demand);
     setShowEditDemandModal(true);
+  };
+
+  const handleEditProductClick = (product: Product) => {
+    setSelectedProductToEdit(product);
+    setShowEditProductModal(true);
   };
 
   const handleSaveProfile = (formData: FormData) => {
@@ -133,8 +213,7 @@ export default function Profile() {
     // If user already has farm details, switch role directly
     const farm = profile?.farm_name || profile?.farmName || currentUser.farm_name || currentUser.farmName;
     if (farm) {
-      setRole('seller');
-      message.success('Switched to Seller Mode.');
+      switchRoleMutation.mutate('seller');
     } else {
       setShowSellerModal(true);
     }
@@ -144,8 +223,7 @@ export default function Profile() {
     // If user already has categories, switch role directly
     const categories = profile?.categories || profile?.selectedCategories || currentUser.categories || currentUser.selectedCategories;
     if (categories && categories.length > 0) {
-      setRole('buyer');
-      message.success('Switched to Buyer Mode.');
+      switchRoleMutation.mutate('buyer');
     } else {
       setShowBuyerModal(true);
     }
@@ -162,18 +240,8 @@ export default function Profile() {
   };
 
   const handleBuyerProfileComplete = (categories: string[]) => {
-    profileMutation.mutate({
+    setupBuyerProfileMutation.mutate({
       categories,
-      selectedCategories: categories,
-      role: 'buyer'
-    }, {
-      onSuccess: (updatedUser) => {
-        updateUser(updatedUser);
-        setRole('buyer');
-        setShowBuyerModal(false);
-        queryClient.invalidateQueries({ queryKey: ['profile'] });
-        message.success('Buyer profile completed! Switched to Buyer Mode.');
-      }
     });
   };
 
@@ -202,7 +270,7 @@ export default function Profile() {
           </div>
         </header>
 
-        <main className="max-w-5xl mx-auto px-6 -mt-16">
+        <main className="max-w-5xl mx-auto px-6 -mt-16 relative z-10">
           {/* Profile Card */}
           <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-100 mb-8 flex flex-col md:flex-row items-center gap-6">
             <div className="w-24 h-24 md:w-32 md:h-32 shrink-0 bg-emerald-100 rounded-full border-4 border-white shadow-md flex items-center justify-center text-emerald-600 text-3xl md:text-4xl font-bold relative">
@@ -229,12 +297,12 @@ export default function Profile() {
                 </div>
                 <div className="flex items-center gap-1 bg-slate-50 px-3 py-1.5 rounded-full">
                   <Calendar size={14} />
-                  Joined {profile?.created_at ? new Date(profile.created_at).getFullYear() : '2024'}
+                  Joined {profile?.created_at ? new Date(profile.created_at).getFullYear() : '2026'}
                 </div>
 
                 {/* KYC Status Badge */}
                 {(() => {
-                  const kycStatus = profile?.kyc_status || profile?.kycStatus || currentUser?.kyc_status || currentUser?.kycStatus;
+                  const kycStatus = getKycStatus(profile) || getKycStatus(currentUser);
                   if (kycStatus === 'approved') {
                     return (
                       <div className="flex items-center gap-1 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-100">
@@ -274,17 +342,27 @@ export default function Profile() {
               {activeRole === 'buyer' ? (
                 <button
                   onClick={handleSwitchToSeller}
-                  className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-bold hover:bg-emerald-100 transition-colors"
+                  disabled={switchRoleMutation.isPending}
+                  className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-bold hover:bg-emerald-100 transition-colors cursor-pointer disabled:opacity-60"
                 >
-                  <ArrowLeftRight size={16} />
+                  {switchRoleMutation.isPending ? (
+                    <Loader2 size={16} className="animate-spin text-emerald-600" />
+                  ) : (
+                    <ArrowLeftRight size={16} />
+                  )}
                   Switch to Seller
                 </button>
               ) : (
                 <button
                   onClick={handleSwitchToBuyer}
-                  className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-bold hover:bg-emerald-100 transition-colors"
+                  disabled={switchRoleMutation.isPending}
+                  className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-bold hover:bg-emerald-100 transition-colors cursor-pointer disabled:opacity-60"
                 >
-                  <ArrowLeftRight size={16} />
+                  {switchRoleMutation.isPending ? (
+                    <Loader2 size={16} className="animate-spin text-emerald-600" />
+                  ) : (
+                    <ArrowLeftRight size={16} />
+                  )}
                   Switch to Buyer
                 </button>
               )}
@@ -296,7 +374,7 @@ export default function Profile() {
             <div className="flex items-center gap-6 mb-6 border-b border-slate-100">
               <button
                 onClick={() => setActiveTab('posted')}
-                className={`text-lg font-bold pb-3 border-b-2 transition-colors ${activeRole === 'buyer' || activeTab === 'posted' ? 'border-emerald-600 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                className="text-lg font-bold pb-3 border-b-2 border-emerald-600 text-slate-900 transition-colors"
               >
                 {activeRole === 'seller' ? 'My Posted Goods' : 'My Posted Demands'}
               </button>
@@ -305,7 +383,7 @@ export default function Profile() {
             {activeRole === 'buyer' ? (
               isDemandsLoading ? (
                 <div className="flex items-center justify-center py-20 w-full col-span-full">
-                  <Loader2 className="animate-spin text-primary" size={40} />
+                  <Loader2 className="animate-spin text-emerald-600" size={40} />
                 </div>
               ) : myDemands.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -321,23 +399,45 @@ export default function Profile() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12 bg-white rounded-2xl border border-slate-100 border-dashed">
-                  <p className="text-slate-500 mb-4">You haven&apos;t posted any demands yet.</p>
-                  <a href="/demands/create" className="text-emerald-600 font-bold hover:underline">Create your first post</a>
+                <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 border-dashed">
+                  <p className="text-slate-400 mb-4 font-medium">You haven&apos;t created any listings yet.</p>
+                  <Link href="/demands/create" className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-md hover:bg-emerald-700 transition-all inline-block">
+                    Create your first post
+                  </Link>
                 </div>
               )
             ) : (
               // Seller browsing mode inside profile
-              <div className="text-center py-12 bg-white rounded-2xl border border-slate-100 border-dashed">
-                <p className="text-slate-500 mb-4">Saved listings and posted goods are available in the marketplace.</p>
-                <a href="/demands" className="text-emerald-600 font-bold hover:underline">Browse Marketplace</a>
-              </div>
+              isProductsLoading ? (
+                <div className="flex items-center justify-center py-20 w-full col-span-full">
+                  <Loader2 className="animate-spin text-emerald-600" size={40} />
+                </div>
+              ) : myProducts.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {myProducts.map(product => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      showEditDelete={true}
+                      onEdit={handleEditProductClick}
+                      onDelete={handleDeleteProduct}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 border-dashed">
+                  <p className="text-slate-400 mb-4 font-medium">You haven&apos;t created any listings yet.</p>
+                  <Link href="/products/create" className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-md hover:bg-emerald-700 transition-all inline-block">
+                    List Your First Product
+                  </Link>
+                </div>
+              )
             )}
           </div>
 
           <button
             onClick={handleLogout}
-            className="md:hidden w-full flex items-center justify-center gap-2 text-red-500 font-bold py-4 bg-red-50 rounded-2xl hover:bg-red-100 transition-colors"
+            className="md:hidden w-full flex items-center justify-center gap-2 text-red-500 font-bold py-4 bg-red-50 rounded-2xl hover:bg-red-100 transition-colors cursor-pointer mb-8"
           >
             <LogOut size={18} />
             Log Out
@@ -355,7 +455,7 @@ export default function Profile() {
           isOpen={showBuyerModal}
           onClose={() => setShowBuyerModal(false)}
           onComplete={handleBuyerProfileComplete}
-          isSubmitting={profileMutation.isPending}
+          isSubmitting={setupBuyerProfileMutation.isPending}
         />
         <EditProfileModal
           isOpen={showEditProfileModal}
@@ -369,8 +469,43 @@ export default function Profile() {
           isOpen={showEditDemandModal}
           onClose={() => setShowEditDemandModal(false)}
           demand={selectedDemandToEdit}
-          onSave={(id, data) => updateDemandMutation.mutate({ id, payload: data })}
+          onSave={(id, data) => {
+            updateDemandMutation.mutate(
+              { id, data },
+              {
+                onSuccess: () => {
+                  message.success('Demand updated successfully!');
+                  setShowEditDemandModal(false);
+                  setSelectedDemandToEdit(null);
+                },
+                onError: (err: any) => {
+                  message.error(err.message || 'Failed to update demand.');
+                }
+              }
+            );
+          }}
           isSubmitting={updateDemandMutation.isPending}
+        />
+        <EditProductModal
+          isOpen={showEditProductModal}
+          onClose={() => setShowEditProductModal(false)}
+          product={selectedProductToEdit}
+          onSave={(id, data) => {
+            updateProductMutation.mutate(
+              { id, formData: data },
+              {
+                onSuccess: () => {
+                  message.success('Product updated successfully!');
+                  setShowEditProductModal(false);
+                  setSelectedProductToEdit(null);
+                },
+                onError: (err: any) => {
+                  message.error(err.message || 'Failed to update product.');
+                }
+              }
+            );
+          }}
+          isSubmitting={updateProductMutation.isPending}
         />
       </div>
     </DashboardLayout>

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
-import { AntdRegistry } from '@ant-design/nextjs-registry';
 import QueryProvider from "@/providers/QueryProvider";
 import "./globals.css";
 
@@ -21,9 +20,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} ${outfit.variable} font-sans antialiased`}>
         <QueryProvider>
-          <AntdRegistry>
-            {children}
-          </AntdRegistry>
+          {children}
         </QueryProvider>
       </body>
     </html>

@@ -25,6 +25,11 @@ export const usersApi = {
     return response.data.data || response.data;
   },
 
+  setupBuyerProfile: async (data: { categories: string[] }): Promise<User> => {
+    const response = await apiClient.post('/users/me/buyer-profile', data);
+    return response.data.data || response.data;
+  },
+
   uploadAvatar: async (file: File): Promise<{ avatarUrl: string }> => {
     const formData = new FormData();
     formData.append('avatar', file);

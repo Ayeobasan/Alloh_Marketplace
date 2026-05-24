@@ -2,8 +2,6 @@
 
 import React, { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { App, ConfigProvider } from 'antd';
-import { StyleProvider } from '@ant-design/cssinjs';
 
 export default function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -21,13 +19,7 @@ export default function QueryProvider({ children }: { children: React.ReactNode 
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StyleProvider layer>
-        <ConfigProvider>
-          <App>
-            {children}
-          </App>
-        </ConfigProvider>
-      </StyleProvider>
+      {children}
     </QueryClientProvider>
   );
 }

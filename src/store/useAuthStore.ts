@@ -7,6 +7,7 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   role: UserRole;
+  activeRole: UserRole; // Current operating mode in two-sided marketplace
   isAuthenticated: boolean;
   isInitialized: boolean;
   savedDemandIds: string[];
@@ -27,6 +28,7 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       role: 'buyer',
+      activeRole: 'buyer',
       isAuthenticated: false,
       isInitialized: false,
       savedDemandIds: [],
@@ -37,6 +39,7 @@ export const useAuthStore = create<AuthState>()(
           accessToken,
           refreshToken,
           role: user.role || 'buyer',
+          activeRole: user.role || 'buyer',
           isAuthenticated: true,
         }),
 
@@ -48,6 +51,7 @@ export const useAuthStore = create<AuthState>()(
       setRole: (role) =>
         set((state) => ({
           role,
+          activeRole: role,
           user: state.user ? { ...state.user, role } : null,
         })),
 
@@ -57,6 +61,7 @@ export const useAuthStore = create<AuthState>()(
           accessToken: null,
           refreshToken: null,
           role: 'buyer',
+          activeRole: 'buyer',
           isAuthenticated: false,
           savedDemandIds: [],
         }),

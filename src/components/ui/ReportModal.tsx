@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Modal, message } from 'antd';
+import { Modal } from '@/components/ui/Modal';
+import { message } from '@/components/ui/message';
 import { ShieldAlert, Loader2 } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { reportsApi } from '@/services/api/reports.api';
@@ -7,7 +8,8 @@ import { reportsApi } from '@/services/api/reports.api';
 interface ReportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  postId: string;
+  contentId: string;
+  contentType: 'demand' | 'product';
 }
 
 const REPORT_REASONS = [
@@ -19,14 +21,14 @@ const REPORT_REASONS = [
   'Other'
 ];
 
-export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, postId }) => {
+export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, contentId, contentType }) => {
   const [selectedReason, setSelectedReason] = useState<string>('');
   const [customDetail, setCustomDetail] = useState<string>('');
 
   const reportMutation = useMutation({
     mutationFn: () => {
       const finalReason = selectedReason === 'Other' ? customDetail.trim() : selectedReason;
-      return reportsApi.createReport({ postId, reason: finalReason });
+      return reportsApi.createReport({ contentId, contentType, reason: finalReason });
     },
     onSuccess: () => {
       message.success('Report submitted successfully. Our team will review this listing.');

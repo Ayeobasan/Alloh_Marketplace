@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Modal, message } from 'antd';
+import { Modal } from '@/components/ui/Modal';
+import { message } from '@/components/ui/message';
 import { Sprout, UploadCloud, CheckCircle2, X } from 'lucide-react';
 import { InputField } from '@/components/shared/InputField';
 import { cn } from '@/lib/utils';

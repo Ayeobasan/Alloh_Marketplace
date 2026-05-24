@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DemandCard } from '@/components/ui/DemandCard';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Search, SlidersHorizontal, ArrowLeft, Loader2 } from 'lucide-react';
-import { Drawer } from 'antd';
+import { Drawer } from '@/components/ui/Drawer';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { demandsApi } from '@/services/api/demands.api';
@@ -14,9 +14,52 @@ import { statesApi } from '@/services/api/states.api';
 
 export default function DemandsFeed() {
   const router = useRouter();
+  const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null);
+  const [isSticky, setIsSticky] = useState(false);
+
+  useEffect(() => {
+    let lastScrollY = window.pageYOffset;
+
+    const updateScrollDirection = () => {
+      const scrollY = window.pageYOffset;
+      const direction = scrollY > lastScrollY ? 'down' : 'up';
+
+      // Sticky when scrolled past header area
+      if (scrollY > 80) {
+        setIsSticky(true);
+      } else {
+        setIsSticky(false);
+      }
+
+      if (direction !== scrollDirection && (scrollY - lastScrollY > 5 || scrollY - lastScrollY < -5)) {
+        setScrollDirection(direction);
+      }
+      lastScrollY = scrollY > 0 ? scrollY : 0;
+    };
+
+    window.addEventListener('scroll', updateScrollDirection, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', updateScrollDirection);
+    };
+  }, [scrollDirection]);
+
+  const [placement, setPlacement] = useState<'right' | 'bottom'>('right');
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setPlacement('bottom');
+      } else {
+        setPlacement('right');
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { role: activeRole } = useAuthStore();
+  const { activeRole } = useAuthStore();
 
   // Parse URL Search Parameters for State Synchronization
   const searchQuery = searchParams.get('search') || '';
@@ -79,18 +122,17 @@ export default function DemandsFeed() {
             <button
               key={state}
               onClick={() => setFilter('state', state)}
-              className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-                selectedState === state 
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-              }`}
+              className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${selectedState === state
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                }`}
             >
               {state}
             </button>
           ))}
         </div>
       </div>
-      
+
       <div>
         <h3 className="text-sm font-bold text-slate-900 mb-3">Urgency Level</h3>
         <div className="flex flex-wrap gap-2">
@@ -98,21 +140,20 @@ export default function DemandsFeed() {
             <button
               key={urgency}
               onClick={() => setFilter('urgency', urgency)}
-              className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-                selectedUrgency === urgency 
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-              }`}
+              className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${selectedUrgency === urgency
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                }`}
             >
               {urgency}
             </button>
           ))}
         </div>
       </div>
-      
+
       {(selectedState !== 'All' || selectedUrgency !== 'All' || searchQuery !== '') && (
-        <button 
-          onClick={clearFilters} 
+        <button
+          onClick={clearFilters}
           className="text-slate-500 hover:text-emerald-600 px-0 font-bold transition-colors text-sm cursor-pointer"
         >
           Clear Filters
@@ -130,9 +171,9 @@ export default function DemandsFeed() {
             <Link href="/" className="md:hidden w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-600">
               <ArrowLeft size={20} />
             </Link>
-            <h1 className="text-xl font-bold text-slate-900">Marketplace</h1>
+            <h1 className="text-xl font-bold text-slate-900">Browse Demands</h1>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <div className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
               {activeRole} Mode
@@ -142,37 +183,44 @@ export default function DemandsFeed() {
       </header>
 
       {/* Main Content */}
-      <main className="px-6 py-6 max-w-7xl mx-auto">
-        <div className="flex flex-col lg:flex-row gap-8">
-          
+      <main className="px-6 pb-6 max-w-7xl mx-auto">
+        <div className="w-full">
           {/* Main Feed */}
           <div className="flex-1">
-            {/* Search Bar */}
-            <div className="flex gap-3 mb-6">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input 
-                  type="text" 
-                  placeholder="Search products, crops..."
-                  className="w-full bg-white border border-slate-200 rounded-2xl py-3 pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm"
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                />
+            {/* Search Bar Wrapper for sticky behavior when scrolling up */}
+            <div className={`sticky top-[73px] z-30 transition-all duration-300 ease-in-out py-4 mb-4 ${isSticky
+              ? 'bg-[#F9FAFB]/95 backdrop-blur-md shadow-md border-b border-slate-200/10 px-6 -mx-6 rounded-b-3xl'
+              : 'bg-transparent border-b border-transparent'
+              } ${isSticky && scrollDirection === 'down'
+                ? '-translate-y-[130%] opacity-0 pointer-events-none'
+                : 'translate-y-0 opacity-100'
+              }`}>
+              <div className="flex gap-3 max-w-7xl mx-auto">
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <input
+                    type="text"
+                    placeholder="Search buyer requests..."
+                    className="w-full bg-white border border-slate-200 rounded-2xl py-3 pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                  />
+                </div>
+                <button
+                  onClick={() => setFilterDrawerOpen(true)}
+                  className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-600 shadow-sm relative cursor-pointer"
+                >
+                  <SlidersHorizontal size={18} />
+                  {(selectedState !== 'All' || selectedUrgency !== 'All') && (
+                    <span className="absolute top-3 right-3 w-2 h-2 bg-emerald-500 rounded-full"></span>
+                  )}
+                </button>
               </div>
-              <button 
-                onClick={() => setFilterDrawerOpen(true)}
-                className="lg:hidden w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-600 shadow-sm relative cursor-pointer"
-              >
-                <SlidersHorizontal size={18} />
-                {(selectedState !== 'All' || selectedUrgency !== 'All') && (
-                  <span className="absolute top-3 right-3 w-2 h-2 bg-emerald-500 rounded-full"></span>
-                )}
-              </button>
             </div>
 
             {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                   <div key={i} className="card-premium h-80 animate-pulse bg-slate-50 flex flex-col p-0 overflow-hidden">
                     <div className="h-48 bg-slate-200/80 w-full" />
                     <div className="p-5 flex-1 space-y-3">
@@ -184,14 +232,14 @@ export default function DemandsFeed() {
                 ))}
               </div>
             ) : demands.length === 0 ? (
-              <div className="text-center py-20 bg-white rounded-3xl border border-slate-100">
-                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Search className="text-slate-400" size={32} />
+              <div className="bg-white border border-slate-100 rounded-3xl p-16 text-center shadow-sm max-w-xl mx-auto mt-6">
+                <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mx-auto mb-4 font-extrabold text-2xl">
+                  🔍
                 </div>
-                <h2 className="text-lg font-bold text-slate-900 mb-2">No demands found</h2>
+                <h2 className="text-lg font-bold text-slate-900 mb-2">No buyer requests available yet</h2>
                 <p className="text-slate-500 text-sm">Try adjusting your filters or search query.</p>
-                <button 
-                  onClick={clearFilters} 
+                <button
+                  onClick={clearFilters}
                   className="mt-4 text-emerald-600 font-bold hover:text-emerald-700 transition-colors cursor-pointer text-sm"
                 >
                   Clear all filters
@@ -204,7 +252,7 @@ export default function DemandsFeed() {
                     Showing <span className="text-slate-900 font-bold">{demands.length}</span> results
                   </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
                   {demands.map((demand) => (
                     <DemandCard key={demand.id} demand={demand} />
                   ))}
@@ -212,36 +260,32 @@ export default function DemandsFeed() {
               </div>
             )}
           </div>
-
-          {/* Desktop Sidebar Filters */}
-          <div className="hidden lg:block w-80 shrink-0">
-            <div className="bg-white rounded-3xl border border-slate-100 p-6 sticky top-24">
-              <div className="flex items-center gap-2 mb-6">
-                <SlidersHorizontal size={18} className="text-slate-400" />
-                <h2 className="text-lg font-bold text-slate-900">Filters</h2>
-              </div>
-              <FilterContent />
-            </div>
-          </div>
         </div>
       </main>
 
-      {/* Mobile Filter Drawer */}
+      {/* Filter Drawer */}
       <Drawer
         title="Filter Demands"
-        placement="bottom"
+        placement={placement}
         onClose={() => setFilterDrawerOpen(false)}
-        open={filterDrawerOpen}
-        height="auto"
-        className="rounded-t-3xl font-sans lg:hidden"
+        isOpen={filterDrawerOpen}
+        extra={
+          (selectedState !== 'All' || selectedUrgency !== 'All' || searchQuery) && (
+            <button onClick={clearFilters} className="text-xs font-bold text-emerald-600 hover:text-emerald-700 transition-colors cursor-pointer">
+              Clear All
+            </button>
+          )
+        }
       >
         <FilterContent />
-        <button 
-          className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-base font-bold shadow-md mt-6 transition-colors cursor-pointer"
-          onClick={() => setFilterDrawerOpen(false)}
-        >
-          Apply Filters
-        </button>
+        {placement === 'bottom' && (
+          <button
+            className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-base font-bold shadow-md mt-6 transition-colors cursor-pointer"
+            onClick={() => setFilterDrawerOpen(false)}
+          >
+            Apply Filters
+          </button>
+        )}
       </Drawer>
     </DashboardLayout>
   );

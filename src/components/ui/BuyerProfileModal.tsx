@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Modal, message } from 'antd';
+import { Modal } from '@/components/ui/Modal';
+import { message } from '@/components/ui/message';
 import { ShoppingBag, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';

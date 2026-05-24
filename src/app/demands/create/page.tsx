@@ -1,16 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { message } from '@/components/ui/message';
 import { ArrowLeft, ImagePlus, X, Loader2, Clock } from 'lucide-react';
-import { message } from 'antd';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import Link from 'next/link';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+import { useAuthStore } from '@/store/useAuthStore';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { getKycStatus } from '@/utils/format';
 import { demandsApi } from '@/services/api/demands.api';
 import { statesApi } from '@/services/api/states.api';
 import { usersApi } from '@/services/api/users.api';
@@ -48,7 +50,7 @@ export default function CreateDemand() {
     enabled: !!currentUser,
   });
 
-  const kycStatus = profile?.kyc_status || profile?.kycStatus || currentUser?.kyc_status || currentUser?.kycStatus;
+  const kycStatus = getKycStatus(profile) || getKycStatus(currentUser);
   const isKycPending = kycStatus === 'pending';
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);

@@ -15,7 +15,11 @@ export const authApi = {
 
   registerSeller: async (data: any) => {
     // Standard register seller data
-    const response = await apiClient.post('/auth/signup/seller', data);
+    const response = await apiClient.post('/auth/signup/seller', data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 
@@ -25,7 +29,10 @@ export const authApi = {
   },
 
   resendOtp: async (email: string) => {
-    const response = await apiClient.post('/auth/resend-otp', { email });
+    const response = await apiClient.post('/auth/resend-otp', {
+      email,
+      type: 'email_verification',
+    });
     return response.data;
   },
 
