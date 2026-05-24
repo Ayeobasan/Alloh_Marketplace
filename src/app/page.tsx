@@ -403,7 +403,7 @@ export default function LandingPage() {
       </section>
 
       {/* 5. How It Works Section (Forest Green Dashboard) */}
-      <section id="how-it-works" className="bg-[#093A1A] text-white py-24 px-6">
+      <section id="how-it-works" className="bg-[#013C04] text-white py-24 px-6">
         <div className="max-w-7xl mx-auto space-y-16">
           {/* Headings */}
           <div className="text-center space-y-3">
@@ -435,7 +435,7 @@ export default function LandingPage() {
             ].map((step, i) => (
               <div
                 key={i}
-                className="bg-white/5 border border-white/10 rounded-3xl p-8 hover:bg-white/10 hover:border-white/20 transition-all duration-300 flex flex-col justify-between min-h-[220px]"
+                className="bg-[#29512B] border border-white/10 rounded-3xl p-8 hover:bg-white/10 hover:border-white/20 transition-all duration-300 flex flex-col justify-between min-h-[220px]"
               >
                 <div className="text-4xl font-black text-emerald-400/30 font-display">{step.num}</div>
                 <div className="space-y-2 mt-6">
