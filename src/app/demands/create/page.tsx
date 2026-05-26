@@ -103,7 +103,7 @@ export default function CreateDemand() {
     onSuccess: () => {
       message.success('Demand posted successfully!');
       queryClient.invalidateQueries({ queryKey: ['demands'] });
-      router.push('/demands');
+      router.push(isSeller ? '/demands' : '/products');
     },
     onError: (error: any) => {
       const errorMessage = error?.response?.data?.message || error?.message || 'Failed to post demand';

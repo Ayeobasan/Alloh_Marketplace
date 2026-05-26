@@ -13,9 +13,16 @@ async function handleRequest(request: NextRequest, { params }: { params: Promise
 
   // Forward all headers except host (we set it ourselves via fetch)
   const forwardHeaders: Record<string, string> = {
-    'Content-Type': 'application/json',
     'Accept': 'application/json',
   };
+
+  // Forward Content-Type exactly as-is (essential for multipart/form-data file uploads)
+  const contentType = request.headers.get('content-type');
+  if (contentType) {
+    forwardHeaders['Content-Type'] = contentType;
+  } else {
+    forwardHeaders['Content-Type'] = 'application/json';
+  }
 
   // Forward Authorization header if present
   const authHeader = request.headers.get('authorization');
@@ -23,13 +30,16 @@ async function handleRequest(request: NextRequest, { params }: { params: Promise
     forwardHeaders['Authorization'] = authHeader;
   }
 
-  // Forward body for mutation methods
-  let body: string | undefined;
+  // Forward body as binary buffer to preserve multipart file upload data
+  let body: any = undefined;
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {
     try {
-      body = await request.text();
+      const buffer = await request.arrayBuffer();
+      if (buffer.byteLength > 0) {
+        body = new Uint8Array(buffer);
+      }
     } catch {
-      // No body — that's fine for DELETE requests
+      // No body — that's fine
     }
   }
 
