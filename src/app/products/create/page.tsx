@@ -236,7 +236,7 @@ export default function CreateProduct() {
     createProductMutation.mutate(payload, {
       onSuccess: () => {
         message.success('Farm product listed successfully!');
-        router.push('/products');
+        router.push('/demands');
       },
       onError: (error: any) => {
         const errorMessage = error?.response?.data?.message || error?.message || 'Failed to list product';

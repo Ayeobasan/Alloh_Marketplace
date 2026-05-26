@@ -130,8 +130,14 @@ export default function Profile() {
       updateUser(updatedUser);
       setShowSellerModal(false);
       queryClient.invalidateQueries({ queryKey: ['profile'] });
-      switchRole('seller');
-      message.success('Seller profile completed! Switched to Seller Mode. KYC is under review.');
+      
+      // Log out user to force re-authentication under the new role
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('switching_role', 'seller');
+      }
+      clearCredentials();
+      message.success('Seller profile completed! Please log back in as a Seller. KYC is under review.');
+      router.push('/login?role=seller');
     },
     onError: (error: any) => {
       message.error(error.message || 'Failed to complete seller profile.');
@@ -145,8 +151,14 @@ export default function Profile() {
       updateUser(updatedUser);
       setShowBuyerModal(false);
       queryClient.invalidateQueries({ queryKey: ['profile'] });
-      switchRole('buyer');
-      message.success('Buyer profile completed! Switched to Buyer Mode.');
+      
+      // Log out user to force re-authentication under the new role
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('switching_role', 'buyer');
+      }
+      clearCredentials();
+      message.success('Buyer profile completed! Please log back in as a Buyer.');
+      router.push('/login?role=buyer');
     },
     onError: (error: any) => {
       message.error(error.message || 'Failed to complete buyer profile.');
