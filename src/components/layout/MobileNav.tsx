@@ -22,7 +22,7 @@ export const MobileNav = () => {
           href="/" 
           className={clsx(
             "flex flex-col items-center gap-1 transition-colors w-14", 
-            pathname === '/' ? "text-emerald-600" : "text-slate-400 hover:text-emerald-600"
+            pathname === '/' ? "text-[#006C04]" : "text-slate-400 hover:text-[#006C04]"
           )}
         >
           <LayoutGrid size={20} className={pathname === '/' ? "fill-emerald-50" : ""} />
@@ -34,8 +34,8 @@ export const MobileNav = () => {
           className={clsx(
             "flex flex-col items-center gap-1 transition-colors w-14", 
             (pathname === (isSeller ? '/demands' : '/products') || pathname.startsWith(isSeller ? '/demands/' : '/products/')) 
-              ? "text-emerald-600" 
-              : "text-slate-400 hover:text-emerald-600"
+              ? "text-[#006C04]" 
+              : "text-slate-400 hover:text-[#006C04]"
           )}
         >
           <Search size={20} />
@@ -48,35 +48,30 @@ export const MobileNav = () => {
         href={isSeller ? '/products/create' : '/demands/create'} 
         className="flex flex-col items-center gap-1 -mt-8 w-16 z-50 shrink-0"
       >
-        <div className="w-14 h-14 bg-emerald-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-emerald-200 ring-4 ring-white hover:scale-105 active:scale-95 transition-all">
+        <div className="w-14 h-14 bg-[#006C04] rounded-full flex items-center justify-center text-white shadow-lg shadow-emerald-200 ring-4 ring-white hover:scale-105 active:scale-95 transition-all">
           <PlusCircle size={28} />
         </div>
-        <span className="text-[10px] font-bold mt-1 text-emerald-600">Post</span>
+        <span className="text-[10px] font-bold mt-1 text-[#006C04]">Post</span>
       </Link>
 
-      {/* Right Side: Saved (Sellers only) and Profile */}
+      {/* Right Side: Saved and Profile */}
       <div className="flex flex-1 justify-around max-w-[40%]">
-        {isSeller ? (
-          <Link 
-            href="/saved" 
-            className={clsx(
-              "flex flex-col items-center gap-1 transition-colors w-14", 
-              pathname === '/saved' ? "text-emerald-600" : "text-slate-400 hover:text-emerald-600"
-            )}
-          >
-            <Bookmark size={20} className={pathname === '/saved' ? "fill-emerald-50" : ""} />
-            <span className="text-[10px] font-semibold">Saved</span>
-          </Link>
-        ) : (
-          /* Symmetrical structural spacer for layout alignment on buyer mode */
-          <div className="w-14" />
-        )}
+        <Link 
+          href="/saved" 
+          className={clsx(
+            "flex flex-col items-center gap-1 transition-colors w-14", 
+            pathname === '/saved' ? "text-[#006C04]" : "text-slate-400 hover:text-[#006C04]"
+          )}
+        >
+          <Bookmark size={20} className={pathname === '/saved' ? "fill-emerald-50" : ""} />
+          <span className="text-[10px] font-semibold">Saved</span>
+        </Link>
 
         <Link 
           href="/profile" 
           className={clsx(
             "flex flex-col items-center gap-1 transition-colors w-14", 
-            pathname.startsWith('/profile') ? "text-emerald-600" : "text-slate-400 hover:text-emerald-600"
+            pathname.startsWith('/profile') ? "text-[#006C04]" : "text-slate-400 hover:text-[#006C04]"
           )}
         >
           <User size={20} className={pathname.startsWith('/profile') ? "fill-emerald-50" : ""} />

@@ -130,7 +130,7 @@ export default function Profile() {
       updateUser(updatedUser);
       setShowSellerModal(false);
       queryClient.invalidateQueries({ queryKey: ['profile'] });
-      
+
       // Log out user to force re-authentication under the new role
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('switching_role', 'seller');
@@ -151,7 +151,7 @@ export default function Profile() {
       updateUser(updatedUser);
       setShowBuyerModal(false);
       queryClient.invalidateQueries({ queryKey: ['profile'] });
-      
+
       // Log out user to force re-authentication under the new role
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('switching_role', 'buyer');
@@ -273,12 +273,22 @@ export default function Profile() {
         <header className="bg-emerald-600 text-white pt-12 pb-24 px-6 md:rounded-b-[2.5rem] relative">
           <div className="max-w-5xl mx-auto flex justify-between items-start">
             <h1 className="text-2xl font-bold">Profile</h1>
-            <button
-              onClick={() => setShowEditProfileModal(true)}
-              className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors"
-            >
-              <Settings size={20} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowEditProfileModal(true)}
+                className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors"
+                title="Settings"
+              >
+                <Settings size={20} />
+              </button>
+              <button
+                onClick={handleLogout}
+                className="w-10 h-10 bg-rose-500/20 text-rose-100 hover:bg-rose-500/40 hover:text-white rounded-full flex items-center justify-center transition-all duration-200 md:hidden"
+                title="Log Out"
+              >
+                <LogOut size={20} />
+              </button>
+            </div>
           </div>
         </header>
 
@@ -447,13 +457,13 @@ export default function Profile() {
             )}
           </div>
 
-          <button
+          {/* <button
             onClick={handleLogout}
             className="md:hidden w-full flex items-center justify-center gap-2 text-red-500 font-bold py-4 bg-red-50 rounded-2xl hover:bg-red-100 transition-colors cursor-pointer mb-8"
           >
             <LogOut size={18} />
             Log Out
-          </button>
+          </button> */}
         </main>
 
         {/* Modals */}
