@@ -134,10 +134,10 @@ function LoginPage() {
             </div>
           </div>
 
-          <button className="w-full h-14 border border-slate-200 rounded-xl flex items-center justify-center gap-3 hover:bg-slate-50 transition-all font-bold text-sm text-slate-700">
+          {/* <button className="w-full h-14 border border-slate-200 rounded-xl flex items-center justify-center gap-3 hover:bg-slate-50 transition-all font-bold text-sm text-slate-700">
             <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
             Continue with Google
-          </button>
+          </button> */}
 
           <p className="text-center text-sm text-slate-500 font-medium pt-4">
             Don't have an account? <Link href="/register" className="text-primary font-bold hover:underline">Create an account</Link>

@@ -14,6 +14,10 @@
   --color-inactive: #868686;
   --color-text-secondary: #787878;
 
+  /* Global emerald brand color overrides */
+  --color-emerald-600: #006C04;
+  --color-emerald-700: #005503;
+
   --color-background: #F9FAFB;
   --color-foreground: #111827;
 
@@ -107,7 +111,7 @@
     border-radius: 0.75rem;
     border: 1px solid #e2e8f0;
     background-color: #ffffff;
-    font-size: 0.875rem;
+    font-size: 1rem; /* Prevent auto-zoom on mobile focus (iOS requires >= 16px) */
     color: #111827;
     transition: all 0.15s ease;
   }

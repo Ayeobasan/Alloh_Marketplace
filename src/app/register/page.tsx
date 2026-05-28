@@ -107,7 +107,16 @@ export default function RegisterPage() {
       setResendCooldown(60); // Trigger 60s cooldown timer
     },
     onError: (error: any) => {
-      message.error(error.message || 'Registration failed.');
+      const msg = error.message || '';
+      const isDuplicate = msg.toLowerCase().includes('already') || msg.toLowerCase().includes('exist') || msg.toLowerCase().includes('taken');
+      if (isDuplicate) {
+        message.warning('Email is already registered. Redirecting to verification...');
+        setStep(4);
+        setSubStep('otp');
+        setResendCooldown(60);
+      } else {
+        message.error(msg || 'Registration failed.');
+      }
     },
   });
 
@@ -125,8 +134,17 @@ export default function RegisterPage() {
       }, 1500);
     },
     onError: (error: any) => {
-      message.error(error.message || 'Registration failed.');
-      setSubStep('uploading');
+      const msg = error.message || '';
+      const isDuplicate = msg.toLowerCase().includes('already') || msg.toLowerCase().includes('exist') || msg.toLowerCase().includes('taken');
+      if (isDuplicate) {
+        message.warning('Email is already registered. Redirecting to verification...');
+        setStep(4);
+        setSubStep('otp');
+        setResendCooldown(60);
+      } else {
+        message.error(msg || 'Registration failed.');
+        setSubStep('uploading');
+      }
     },
   });
 
