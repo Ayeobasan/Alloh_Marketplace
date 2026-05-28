@@ -258,7 +258,7 @@ export default function LandingPage() {
             {/* Stats Blocks */}
             <div className="flex items-center justify-center lg:justify-start gap-6 md:gap-12 pt-4 border-t border-slate-100">
               <div >
-                <div className="text-2xl md:text-3xl font-extrabold text-center text-slate-900">10+</div>
+                <div className="text-2xl md:text-3xl font-extrabold text-center text-slate-900">2+</div>
                 <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Years Exp</div>
               </div>
               <div className="w-[1px] h-10 bg-slate-100" />
@@ -580,8 +580,7 @@ export default function LandingPage() {
                 <p className="flex items-start gap-1.5">
                   <span className="font-semibold text-emerald-400 shrink-0">Tel:</span>
                   <span className="text-slate-200 font-medium">
-                    +234 8065782391,<br />
-                    +234 7089744623
+                    +234 9067260032
                   </span>
                 </p>
                 <p className="flex items-center gap-1.5">
