@@ -29,12 +29,7 @@ export default function LandingPage() {
   const [expandedFaq, setExpandedFaq] = useState<number | null>(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Dynamic automatic feed resolution & redirection for logged-in users
-  useEffect(() => {
-    if (isInitialized && isAuthenticated) {
-      router.replace(activeRole === 'seller' ? '/demands' : '/products');
-    }
-  }, [isInitialized, isAuthenticated, activeRole, router]);
+
 
   const toggleFaq = (index: number) => {
     setExpandedFaq(expandedFaq === index ? null : index);
@@ -130,14 +125,7 @@ export default function LandingPage() {
     }
   ];
 
-  // Render a clean fallback transition loader if redirecting
-  if (isInitialized && isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-emerald-600" />
-      </div>
-    );
-  }
+
 
   return (
     <div className="min-h-screen bg-white flex flex-col selection:bg-emerald-500 selection:text-white font-sans">
@@ -160,12 +148,20 @@ export default function LandingPage() {
 
           {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center gap-4">
-            <Link href="/login" className="text-sm font-bold text-slate-600 hover:text-emerald-600 transition-colors">
-              Login
-            </Link>
-            <Link href="/register" className="px-6 py-3 bg-[#006C04] text-white rounded-full text-sm font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-700 hover:scale-105 active:scale-95 transition-all">
-              Register
-            </Link>
+            {isAuthenticated ? (
+              <Link href={activeRole === 'seller' ? '/demands' : '/products'} className="px-6 py-3 bg-[#006C04] text-white rounded-full text-sm font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-700 hover:scale-105 active:scale-95 transition-all">
+                Go to Feed
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="text-sm font-bold text-slate-600 hover:text-emerald-600 transition-colors">
+                  Login
+                </Link>
+                <Link href="/register" className="px-6 py-3 bg-[#006C04] text-white rounded-full text-sm font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-700 hover:scale-105 active:scale-95 transition-all">
+                  Register
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -188,12 +184,20 @@ export default function LandingPage() {
             </nav>
             <hr className="border-slate-100" />
             <div className="flex flex-col gap-3">
-              <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="w-full h-12 flex items-center justify-center font-bold text-slate-600 bg-slate-50 rounded-xl">
-                Login
-              </Link>
-              <Link href="/register" onClick={() => setMobileMenuOpen(false)} className="w-full h-12 flex items-center justify-center font-bold text-white bg-emerald-600 rounded-xl shadow-md">
-                Register
-              </Link>
+              {isAuthenticated ? (
+                <Link href={activeRole === 'seller' ? '/demands' : '/products'} onClick={() => setMobileMenuOpen(false)} className="w-full h-12 flex items-center justify-center font-bold text-white bg-[#006C04] rounded-xl shadow-md">
+                  Go to Feed
+                </Link>
+              ) : (
+                <>
+                  <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="w-full h-12 flex items-center justify-center font-bold text-slate-600 bg-slate-50 rounded-xl">
+                    Login
+                  </Link>
+                  <Link href="/register" onClick={() => setMobileMenuOpen(false)} className="w-full h-12 flex items-center justify-center font-bold text-white bg-emerald-600 rounded-xl shadow-md">
+                    Register
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -223,20 +227,32 @@ export default function LandingPage() {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Link
-                href="/login"
-                className="h-14 px-8 bg-emerald-600 text-white rounded-full flex items-center justify-center gap-2 font-bold shadow-xl shadow-emerald-200 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
-              >
-                <ShoppingBag size={18} />
-                Start Shopping
-              </Link>
-              <Link
-                href="/register"
-                className="h-14 px-8 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-full flex items-center justify-center gap-2 font-bold shadow-sm hover:scale-105 active:scale-95 transition-transform cursor-pointer"
-              >
-                <Sprout size={18} className="text-emerald-600" />
-                Become a Seller
-              </Link>
+              {isAuthenticated ? (
+                <Link
+                  href={activeRole === 'seller' ? '/demands' : '/products'}
+                  className="h-14 px-8 bg-emerald-600 text-white rounded-full flex items-center justify-center gap-2 font-bold shadow-xl shadow-emerald-200 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+                >
+                  <ShoppingBag size={18} />
+                  Go to Marketplace
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="h-14 px-8 bg-emerald-600 text-white rounded-full flex items-center justify-center gap-2 font-bold shadow-xl shadow-emerald-200 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+                  >
+                    <ShoppingBag size={18} />
+                    Start Shopping
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="h-14 px-8 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-full flex items-center justify-center gap-2 font-bold shadow-sm hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+                  >
+                    <Sprout size={18} className="text-emerald-600" />
+                    Become a Seller
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Stats Blocks */}
@@ -515,20 +531,32 @@ export default function LandingPage() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                href="/register"
-                className="h-14 px-8 bg-emerald-600 text-white rounded-full flex items-center justify-center gap-2 font-bold shadow-lg hover:scale-105 active:scale-95 transition-transform cursor-pointer"
-              >
-                <ShoppingBag size={18} />
-                Start Buying
-              </Link>
-              <Link
-                href="/register"
-                className="h-14 px-8 border border-white/20 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 rounded-full flex items-center justify-center gap-2 font-bold hover:scale-105 active:scale-95 transition-transform cursor-pointer"
-              >
-                <Sprout size={18} />
-                Start Selling
-              </Link>
+              {isAuthenticated ? (
+                <Link
+                  href={activeRole === 'seller' ? '/demands' : '/products'}
+                  className="h-14 px-8 bg-emerald-600 text-white rounded-full flex items-center justify-center gap-2 font-bold shadow-lg hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+                >
+                  <ShoppingBag size={18} />
+                  Go to Marketplace
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/register"
+                    className="h-14 px-8 bg-emerald-600 text-white rounded-full flex items-center justify-center gap-2 font-bold shadow-lg hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+                  >
+                    <ShoppingBag size={18} />
+                    Start Buying
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="h-14 px-8 border border-white/20 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 rounded-full flex items-center justify-center gap-2 font-bold hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+                  >
+                    <Sprout size={18} />
+                    Start Selling
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

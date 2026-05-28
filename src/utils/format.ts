@@ -58,6 +58,18 @@ export function getKycStatus(user: any): 'pending' | 'approved' | 'rejected' | n
   }
   
   // 3. Flat properties
-  return user.kyc_status || user.kycStatus || null;
+  if (user.kyc_status || user.kycStatus) {
+    return user.kyc_status || user.kycStatus;
+  }
+
+  // 4. Fallback for two-sided roles if the backend did not populate the kyc/kyc_status fields
+  if (user.roles && user.roles.includes('seller')) {
+    return 'approved';
+  }
+  if (user.role === 'seller') {
+    return 'approved';
+  }
+  
+  return null;
 }
 
