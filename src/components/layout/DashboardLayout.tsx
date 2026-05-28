@@ -14,25 +14,26 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
   const { activeRole, clearCredentials } = useAuthStore();
   const isSeller = activeRole === 'seller';
 
-  const navLinks = isSeller 
+  const navLinks = isSeller
     ? [
-        { href: '/demands', icon: Search, label: 'Browse Demands' },
-        { href: '/saved', icon: Bookmark, label: 'Saved Listings' },
-        { href: '/profile', icon: User, label: 'Profile' },
-      ]
+      { href: '/demands', icon: Search, label: 'Browse Demands' },
+      { href: '/saved', icon: Bookmark, label: 'Saved Listings' },
+      { href: '/profile', icon: User, label: 'Profile' },
+    ]
     : [
-        { href: '/products', icon: Search, label: 'Browse Products' },
-        { href: '/profile', icon: User, label: 'Profile' },
-      ];
+      { href: '/products', icon: Search, label: 'Browse Products' },
+      { href: '/profile', icon: User, label: 'Profile' },
+    ];
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] md:flex font-sans">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 h-screen fixed top-0 left-0 bg-white border-r border-slate-100 shadow-sm z-50">
         <div className="h-20 flex items-center px-8 border-b border-slate-50">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-bold">A</div>
-            <span className="text-xl font-bold text-slate-900 tracking-tight font-display">Alloh</span>
+          <Link href="/" className="flex  items-center gap-2">
+            <div className="w-15 h-15 overflow-hidden shrink-0 flex items-center justify-center">
+              <img src="/Alloh.png" alt="Alloh Logo" className="w-full h-full object-cover" />
+            </div>
           </Link>
         </div>
 
