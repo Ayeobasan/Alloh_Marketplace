@@ -9,7 +9,7 @@ export const AuthFooter: React.FC = () => {
       <div className="flex items-center gap-8">
         <button className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-primary transition-colors">Terms of service</button>
         <button className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-primary transition-colors">Privacy</button>
-        <button className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-primary transition-colors">Support</button>
+        <a href="mailto:Allohfarm@gmail.com" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-primary transition-colors">Support</a>
       </div>
     </footer>
   );

@@ -163,7 +163,7 @@ export default function LandingPage() {
             <Link href="/login" className="text-sm font-bold text-slate-600 hover:text-emerald-600 transition-colors">
               Login
             </Link>
-            <Link href="/register" className="px-6 py-3 bg-emerald-600 text-white rounded-full text-sm font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-700 hover:scale-105 active:scale-95 transition-all">
+            <Link href="/register" className="px-6 py-3 bg-[#006C04] text-white rounded-full text-sm font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-700 hover:scale-105 active:scale-95 transition-all">
               Register
             </Link>
           </div>
@@ -558,8 +558,8 @@ export default function LandingPage() {
                 </p>
                 <p className="flex items-center gap-1.5">
                   <span className="font-semibold text-emerald-400 shrink-0">Email:</span>
-                  <a href="mailto:alloyfarms@org.ng" className="text-slate-200 hover:text-emerald-400 font-medium transition-colors">
-                    alloyfarms@org.ng
+                  <a href="mailto:Allohfarm@gmail.com" className="text-slate-200 hover:text-emerald-400 font-medium transition-colors">
+                    Allohfarm@gmail.com
                   </a>
                 </p>
               </div>
@@ -581,8 +581,8 @@ export default function LandingPage() {
             <h4 className="text-sm font-bold text-white uppercase tracking-wider">Support</h4>
             <ul className="space-y-2 text-xs font-medium">
               <li><a href="#faqs" className="hover:text-white transition-colors">FAQs</a></li>
-              <li><Link href="/login" className="hover:text-white transition-colors">Contact Us</Link></li>
-              <li><Link href="/login" className="hover:text-white transition-colors">Help Center</Link></li>
+              <li><a href="mailto:Allohfarm@gmail.com" className="hover:text-white transition-colors">Contact Us</a></li>
+              <li><a href="mailto:Allohfarm@gmail.com" className="hover:text-white transition-colors">Help Center</a></li>
             </ul>
           </div>
 
