@@ -84,6 +84,18 @@ export default function RegisterPage() {
     "Wholesale", "Livestock", "Fertilizers", "Equipements", "Seeds", "Hydroponics", "Spices & Herbs"
   ];
 
+  // Mutation: Resend OTP — declared first; referenced by buyer/seller duplicate-email paths
+  const resendOtpMutation = useMutation({
+    mutationFn: (email: string) => authApi.resendOtp(email),
+    onSuccess: () => {
+      message.success('Verification code sent to your email.');
+      setResendCooldown(60);
+    },
+    onError: (error: any) => {
+      message.error(error.message || 'Resend failed.');
+    },
+  });
+
   // Mutation: Register Buyer
   const registerBuyerMutation = useMutation({
     mutationFn: (data: RegisterInput) => {
@@ -104,16 +116,17 @@ export default function RegisterPage() {
       message.success('Account registered! Verification code sent to your email.');
       setStep(4);
       setSubStep('otp');
-      setResendCooldown(60); // Trigger 60s cooldown timer
+      setResendCooldown(60);
     },
     onError: (error: any) => {
       const msg = error.message || '';
       const isDuplicate = msg.toLowerCase().includes('already') || msg.toLowerCase().includes('exist') || msg.toLowerCase().includes('taken');
       if (isDuplicate) {
-        message.warning('Email is already registered. Redirecting to verification...');
+        message.warning('Email is already registered. Sending a verification code...');
         setStep(4);
         setSubStep('otp');
-        setResendCooldown(60);
+        // Actually send the code — the onSuccess handler sets the 60s cooldown
+        resendOtpMutation.mutate(getValues('email'));
       } else {
         message.error(msg || 'Registration failed.');
       }
@@ -130,17 +143,18 @@ export default function RegisterPage() {
       setTimeout(() => {
         setStep(4);
         setSubStep('otp');
-        setResendCooldown(60); // Trigger 60s cooldown timer
+        setResendCooldown(60);
       }, 1500);
     },
     onError: (error: any) => {
       const msg = error.message || '';
       const isDuplicate = msg.toLowerCase().includes('already') || msg.toLowerCase().includes('exist') || msg.toLowerCase().includes('taken');
       if (isDuplicate) {
-        message.warning('Email is already registered. Redirecting to verification...');
+        message.warning('Email is already registered. Sending a verification code...');
         setStep(4);
         setSubStep('otp');
-        setResendCooldown(60);
+        // Actually send the code — the onSuccess handler sets the 60s cooldown
+        resendOtpMutation.mutate(getValues('email'));
       } else {
         message.error(msg || 'Registration failed.');
         setSubStep('uploading');
@@ -159,18 +173,6 @@ export default function RegisterPage() {
     },
     onError: (error: any) => {
       message.error(error.message || 'OTP verification failed.');
-    },
-  });
-
-  // Mutation: Resend OTP
-  const resendOtpMutation = useMutation({
-    mutationFn: (email: string) => authApi.resendOtp(email),
-    onSuccess: () => {
-      message.success('Verification code resent successfully.');
-      setResendCooldown(60); // Trigger 60s cooldown timer
-    },
-    onError: (error: any) => {
-      message.error(error.message || 'Resend failed.');
     },
   });
 
