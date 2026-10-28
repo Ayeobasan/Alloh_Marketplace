@@ -16,7 +16,6 @@ import {
   UploadCloud,
   Eye,
   EyeOff,
-  Mail,
   Loader2,
 } from 'lucide-react';
 import { message } from '@/components/ui/message';
@@ -26,6 +25,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { authApi } from '@/services/api/auth.api';
 import { categoriesApi } from '@/services/api/categories.api';
+import { VerifyEmailPanel } from '@/components/shared/VerifyEmailPanel';
 
 const registerSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -487,67 +487,18 @@ export default function RegisterPage() {
           {step === 4 && (
             <div className="max-w-2xl mx-auto space-y-12 animate-in fade-in duration-500">
               {subStep === 'otp' ? (
-                <div className="flex flex-col items-center space-y-10 text-center">
-                  <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center"><Mail size={32} className="text-emerald-700 opacity-30" /></div>
-                  <div className="space-y-2">
-                    <h2 className="text-2xl font-bold text-slate-900">Verify your Email</h2>
-                    <p className="text-sm text-slate-500">Enter the 6-digit code sent to your email.</p>
-                  </div>
-                  <div className="flex gap-3 justify-center">
-                    {[0, 1, 2, 3, 4, 5].map((index) => (
-                      <input
-                        key={index}
-                        type="text"
-                        maxLength={1}
-                        pattern="\d*"
-                        value={otpValue[index] || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (/^\d*$/.test(val)) {
-                            const newOtp = otpValue.split('');
-                            newOtp[index] = val;
-                            const finalOtp = newOtp.join('').slice(0, 6);
-                            setOtpValue(finalOtp);
-                            // Auto-focus next input
-                            if (val && index < 5) {
-                              const nextInput = document.getElementById(`otp-${index + 1}`);
-                              nextInput?.focus();
-                            }
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Backspace') {
-                            if (!otpValue[index] && index > 0) {
-                              const prevInput = document.getElementById(`otp-${index - 1}`);
-                              prevInput?.focus();
-                              const newOtp = otpValue.split('');
-                              newOtp[index - 1] = '';
-                              setOtpValue(newOtp.join(''));
-                            } else {
-                              const newOtp = otpValue.split('');
-                              newOtp[index] = '';
-                              setOtpValue(newOtp.join(''));
-                            }
-                          }
-                        }}
-                        id={`otp-${index}`}
-                        className="w-12 h-14 text-center text-xl font-bold border border-slate-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-emerald-500/10 focus:outline-none bg-white shadow-sm transition-all"
-                      />
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => resendOtpMutation.mutate(getValues('email'))}
-                    disabled={resendOtpMutation.isPending || resendCooldown > 0}
-                    className="text-xs font-bold text-primary underline disabled:text-slate-400 cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    {resendOtpMutation.isPending 
-                      ? 'Resending...' 
-                      : resendCooldown > 0 
-                        ? `Resend Code (${resendCooldown}s)` 
-                        : 'Resend Code'}
-                  </button>
-                </div>
+                <VerifyEmailPanel
+                  email={getValues('email')}
+                  otpValue={otpValue}
+                  setOtpValue={setOtpValue}
+                  onVerify={() =>
+                    verifyEmailMutation.mutate({ email: getValues('email'), code: otpValue })
+                  }
+                  onResend={() => resendOtpMutation.mutate(getValues('email'))}
+                  isVerifying={verifyEmailMutation.isPending}
+                  isResending={resendOtpMutation.isPending}
+                  resendCooldown={resendCooldown}
+                />
               ) : (
                 <div className="flex flex-col items-center space-y-8 text-center">
                   <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center"><CheckCircle2 size={40} className="text-primary" /></div>
@@ -560,7 +511,7 @@ export default function RegisterPage() {
           <div className="mt-12 max-w-3xl mx-auto w-full flex flex-col items-center gap-4 px-4 md:px-0">
             {subStep === 'verified' ? (
               <Link href="/login" className="btn-primary w-full md:max-w-sm h-14 flex items-center justify-center">Go Login</Link>
-            ) : (
+            ) : step === 4 && subStep === 'otp' ? null : (
               <button
                 type="button"
                 onClick={nextStep}
