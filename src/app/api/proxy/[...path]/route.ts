@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 // Server-side only — never exposed to browser
 const BACKEND_BASE_URL = process.env.API_BASE_URL || 'https://allohbackend.onrender.com/api/v1';
 
+// Statuses whose responses must not have a body.
+const NULL_BODY_STATUSES = new Set([204, 205, 304]);
+
 async function handleRequest(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
   const targetPath = path.join('/');
@@ -31,50 +34,57 @@ async function handleRequest(request: NextRequest, { params }: { params: Promise
   }
 
   // Forward body as binary buffer to preserve multipart file upload data
-  let body: any = undefined;
+  let body: ArrayBuffer | undefined = undefined;
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {
     try {
       const buffer = await request.arrayBuffer();
       if (buffer.byteLength > 0) {
-        body = new Uint8Array(buffer);
+        body = buffer;
       }
     } catch {
       // No body — that's fine
     }
   }
 
+  let backendResponse: Response;
+  let responseText: string;
   try {
-    const backendResponse = await fetch(targetUrl, {
+    backendResponse = await fetch(targetUrl, {
       method: request.method,
       headers: forwardHeaders,
       body: body || undefined,
       // Disable Next.js fetch caching for all proxy calls
       cache: 'no-store',
     });
-
-    const responseText = await backendResponse.text();
-
-    // Parse JSON if possible, otherwise forward raw text
-    let responseBody: any;
-    try {
-      responseBody = JSON.parse(responseText);
-    } catch {
-      responseBody = responseText;
-    }
-
-    return NextResponse.json(responseBody, {
-      status: backendResponse.status,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-  } catch (err: any) {
-    console.error(`[User Proxy] Failed to reach backend at ${targetUrl}:`, err?.message);
+    responseText = NULL_BODY_STATUSES.has(backendResponse.status) ? '' : await backendResponse.text();
+  } catch (err) {
+    console.error(`[User Proxy] Failed to reach backend at ${targetUrl}:`, err instanceof Error ? err.message : err);
     return NextResponse.json(
       { error: 'Failed to connect to the backend service. Please try again later.' },
       { status: 502 }
     );
   }
+
+  // e.g. 204 from a DELETE: a Response with these statuses can't carry a body (the
+  // constructor throws), so pass the status through with no body.
+  if (NULL_BODY_STATUSES.has(backendResponse.status)) {
+    return new Response(null, { status: backendResponse.status });
+  }
+
+  // Parse JSON if possible, otherwise forward raw text
+  let responseBody: unknown;
+  try {
+    responseBody = JSON.parse(responseText);
+  } catch {
+    responseBody = responseText;
+  }
+
+  return NextResponse.json(responseBody, {
+    status: backendResponse.status,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
 }
 
 export const GET = handleRequest;

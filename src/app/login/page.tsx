@@ -11,7 +11,7 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { authApi } from '@/services/api/auth.api';
 import { useAuthStore } from '@/store/useAuthStore';
 import { message } from '@/components/ui/message';
@@ -26,9 +26,11 @@ type LoginInput = z.infer<typeof loginSchema>;
 function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const { setCredentials, setRole: setStoreRole } = useAuthStore();
   const [role, setRole] = useState<'buyer' | 'seller'>('buyer');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   // --- Email verification recovery state ---
   const [verificationMode, setVerificationMode] = useState(false);
@@ -88,7 +90,9 @@ function LoginPage() {
   const mutation = useMutation({
     mutationFn: (data: LoginInput & { role: 'buyer' | 'seller' }) => authApi.login(data),
     onSuccess: (data) => {
-      setCredentials(data);
+      // Drop anything cached for a previous account before the new one is loaded.
+      queryClient.clear();
+      setCredentials({ ...data, rememberMe });
       setStoreRole(role);
       message.success('Welcome back to Alloh!');
       router.push(role === 'seller' ? '/demands' : '/products');
@@ -183,7 +187,13 @@ function LoginPage() {
 
                 <div className="flex items-center justify-between px-1">
                   <div className="flex items-center gap-3">
-                    <input type="checkbox" id="remember" className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary" />
+                    <input
+                      type="checkbox"
+                      id="remember"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
+                    />
                     <label htmlFor="remember" className="text-sm font-medium text-slate-600">Remember me</label>
                   </div>
                   <Link href="/forgot-password" className="text-sm font-bold text-primary hover:underline">Forgot Password?</Link>

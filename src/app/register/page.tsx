@@ -26,6 +26,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { authApi } from '@/services/api/auth.api';
 import { categoriesApi } from '@/services/api/categories.api';
 import { VerifyEmailPanel } from '@/components/shared/VerifyEmailPanel';
+import type { ApiError } from '@/services/api/axios';
 
 const registerSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -43,6 +44,22 @@ const registerSchema = z.object({
 
 type RegisterInput = z.infer<typeof registerSchema>;
 type SubStep = 'selection' | 'uploading' | 'verifying' | 'success' | 'otp' | 'verified';
+
+/**
+ * Works out whether a signup error means the email or the phone number is already
+ * registered. Only a duplicate *email* should lead to the verification-code screen.
+ */
+function getDuplicateField(error: ApiError): 'email' | 'phone' | null {
+  const msg = (error.message || '').toLowerCase();
+  const looksDuplicate =
+    error.status === 409 ||
+    /\balready\b/.test(msg) ||
+    /\b(taken|in use)\b/.test(msg) ||
+    /\b(email|user|account)\b.*\bexists?\b/.test(msg);
+  if (!looksDuplicate) return null;
+  if (msg.includes('phone') && !msg.includes('email')) return 'phone';
+  return 'email';
+}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -68,7 +85,7 @@ export default function RegisterPage() {
     };
   }, [resendCooldown]);
 
-  const { register, handleSubmit, trigger, getValues, formState: { errors } } = useForm<RegisterInput>({
+  const { register, handleSubmit, trigger, getValues, setError, formState: { errors } } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
   });
 
@@ -91,10 +108,44 @@ export default function RegisterPage() {
       message.success('Verification code sent to your email.');
       setResendCooldown(60);
     },
-    onError: (error: any) => {
+    onError: (error: ApiError) => {
+      const msg = (error.message || '').toLowerCase();
+      // Signing up again with an email that's already verified: there's nothing to verify.
+      if (msg.includes('already') && msg.includes('verified')) {
+        message.info('This email is already verified. Please log in.');
+        router.push('/login');
+        return;
+      }
       message.error(error.message || 'Resend failed.');
     },
   });
+
+  const handleRegisterError = (error: ApiError) => {
+    const duplicate = getDuplicateField(error);
+
+    if (duplicate === 'email') {
+      message.warning('Email is already registered. Sending a verification code...');
+      setStep(4);
+      setSubStep('otp');
+      // Actually send the code — the onSuccess handler sets the 60s cooldown
+      resendOtpMutation.mutate(getValues('email'));
+      return;
+    }
+
+    message.error(error.message || 'Registration failed.');
+
+    if (duplicate === 'phone') {
+      // Back to the form so the number can be changed.
+      setStep(2);
+      setSubStep('selection');
+      setError('phone', { type: 'server', message: 'Phone number is already registered' });
+      return;
+    }
+
+    if (accountType === 'seller') {
+      setSubStep('uploading');
+    }
+  };
 
   // Mutation: Register Buyer
   const registerBuyerMutation = useMutation({
@@ -118,19 +169,7 @@ export default function RegisterPage() {
       setSubStep('otp');
       setResendCooldown(60);
     },
-    onError: (error: any) => {
-      const msg = error.message || '';
-      const isDuplicate = msg.toLowerCase().includes('already') || msg.toLowerCase().includes('exist') || msg.toLowerCase().includes('taken');
-      if (isDuplicate) {
-        message.warning('Email is already registered. Sending a verification code...');
-        setStep(4);
-        setSubStep('otp');
-        // Actually send the code — the onSuccess handler sets the 60s cooldown
-        resendOtpMutation.mutate(getValues('email'));
-      } else {
-        message.error(msg || 'Registration failed.');
-      }
-    },
+    onError: handleRegisterError,
   });
 
   // Mutation: Register Seller
@@ -146,20 +185,7 @@ export default function RegisterPage() {
         setResendCooldown(60);
       }, 1500);
     },
-    onError: (error: any) => {
-      const msg = error.message || '';
-      const isDuplicate = msg.toLowerCase().includes('already') || msg.toLowerCase().includes('exist') || msg.toLowerCase().includes('taken');
-      if (isDuplicate) {
-        message.warning('Email is already registered. Sending a verification code...');
-        setStep(4);
-        setSubStep('otp');
-        // Actually send the code — the onSuccess handler sets the 60s cooldown
-        resendOtpMutation.mutate(getValues('email'));
-      } else {
-        message.error(msg || 'Registration failed.');
-        setSubStep('uploading');
-      }
-    },
+    onError: handleRegisterError,
   });
 
   // Mutation: Verify Email
@@ -497,6 +523,12 @@ export default function RegisterPage() {
                     verifyEmailMutation.mutate({ email: getValues('email'), code: otpValue })
                   }
                   onResend={() => resendOtpMutation.mutate(getValues('email'))}
+                  onBack={() => {
+                    setOtpValue('');
+                    setStep(2);
+                    setSubStep('selection');
+                  }}
+                  backLabel="Edit my details"
                   isVerifying={verifyEmailMutation.isPending}
                   isResending={resendOtpMutation.isPending}
                   resendCooldown={resendCooldown}

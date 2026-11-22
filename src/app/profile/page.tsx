@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -18,20 +18,35 @@ import { EditProfileModal } from '@/components/ui/EditProfileModal';
 import { EditDemandModal } from '@/components/ui/EditDemandModal';
 import { EditProductModal } from '@/components/ui/EditProductModal';
 import { useMarketplaceRole } from '@/hooks/useMarketplaceRole';
+import { useLogout } from '@/hooks/useLogout';
 import { useMyProducts } from '@/features/products/hooks/useMyProducts';
 import { useDeleteProduct } from '@/features/products/hooks/useDeleteProduct';
 import { useUpdateProduct } from '@/features/products/hooks/useUpdateProduct';
 import { useMyDemands } from '@/features/demands/hooks/useMyDemands';
 import { useDeleteDemand } from '@/features/demands/hooks/useDeleteDemand';
 import { useUpdateDemand } from '@/features/demands/hooks/useUpdateDemand';
-import { DemandPost, Product } from '@/types';
+import { DemandPost, Product, UserRole } from '@/types';
 import { getKycStatus } from '@/utils/format';
 
 export default function Profile() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user: currentUser, updateUser, clearCredentials, isAuthenticated } = useAuthStore();
-  const { activeRole, switchRole } = useMarketplaceRole();
+  const { user: currentUser, updateUser, isAuthenticated } = useAuthStore();
+  const { activeRole } = useMarketplaceRole();
+  const logout = useLogout();
+  // Set when this page logs the user out itself, so the auth-guard effect below doesn't
+  // override that navigation (e.g. /login?role=seller) with a plain /login.
+  const isLoggingOutRef = useRef(false);
+
+  // A role change only takes effect after signing in again under the new role.
+  const logOutForRole = (newRole: UserRole, successMessage: string) => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('switching_role', newRole);
+    }
+    message.success(successMessage);
+    isLoggingOutRef.current = true;
+    logout(`/login?role=${newRole}`);
+  };
 
   const [activeTab, setActiveTab] = useState<'posted' | 'saved'>('posted');
   const [showSellerModal, setShowSellerModal] = useState(false);
@@ -44,7 +59,7 @@ export default function Profile() {
 
   // Sync session authentication
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated && !isLoggingOutRef.current) {
       router.push('/login');
     }
   }, [isAuthenticated, router]);
@@ -93,30 +108,15 @@ export default function Profile() {
   // Dedicated role switch mutation to sync with backend database
   const switchRoleMutation = useMutation({
     mutationFn: (newRole: 'buyer' | 'seller') => usersApi.updateProfile({ role: newRole }),
-    onSuccess: (updatedUser, newRole) => {
-      updateUser(updatedUser);
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
-      switchRole(newRole);
-
-      // Log out user to force re-authentication under the new role
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('switching_role', newRole);
-      }
-      clearCredentials();
-      message.success(`Marketplace role switched successfully. Please log back in as a ${newRole === 'seller' ? 'Seller' : 'Buyer'}.`);
-      router.push(`/login?role=${newRole}`);
+    onSuccess: (_updatedUser, newRole) => {
+      logOutForRole(newRole, `Marketplace role switched successfully. Please log back in as a ${newRole === 'seller' ? 'Seller' : 'Buyer'}.`);
     },
     onError: (error: any, newRole: 'buyer' | 'seller') => {
       const errMsg = error.response?.data?.message || error.message || '';
       if (errMsg.includes('No fields to update')) {
         // Even if backend says "No fields to update", it means the role is already set correctly on the backend.
         // We log them out so they can log back in as the new role.
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem('switching_role', newRole);
-        }
-        clearCredentials();
-        message.success(`Marketplace role switched successfully. Please log back in as a ${newRole === 'seller' ? 'Seller' : 'Buyer'}.`);
-        router.push(`/login?role=${newRole}`);
+        logOutForRole(newRole, `Marketplace role switched successfully. Please log back in as a ${newRole === 'seller' ? 'Seller' : 'Buyer'}.`);
       } else {
         message.error(errMsg || 'Failed to switch marketplace role.');
       }
@@ -126,18 +126,9 @@ export default function Profile() {
   // Seller profile setup mutation
   const setupSellerProfileMutation = useMutation({
     mutationFn: (payload: FormData) => usersApi.setupSellerProfile(payload),
-    onSuccess: (updatedUser) => {
-      updateUser(updatedUser);
+    onSuccess: () => {
       setShowSellerModal(false);
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
-
-      // Log out user to force re-authentication under the new role
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('switching_role', 'seller');
-      }
-      clearCredentials();
-      message.success('Seller profile completed! Please log back in as a Seller. KYC is under review.');
-      router.push('/login?role=seller');
+      logOutForRole('seller', 'Seller profile completed! Please log back in as a Seller. KYC is under review.');
     },
     onError: (error: any) => {
       message.error(error.message || 'Failed to complete seller profile.');
@@ -147,18 +138,9 @@ export default function Profile() {
   // Buyer profile setup mutation
   const setupBuyerProfileMutation = useMutation({
     mutationFn: (payload: { categories: string[] }) => usersApi.setupBuyerProfile(payload),
-    onSuccess: (updatedUser) => {
-      updateUser(updatedUser);
+    onSuccess: () => {
       setShowBuyerModal(false);
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
-
-      // Log out user to force re-authentication under the new role
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('switching_role', 'buyer');
-      }
-      clearCredentials();
-      message.success('Buyer profile completed! Please log back in as a Buyer.');
-      router.push('/login?role=buyer');
+      logOutForRole('buyer', 'Buyer profile completed! Please log back in as a Buyer.');
     },
     onError: (error: any) => {
       message.error(error.message || 'Failed to complete buyer profile.');
@@ -258,14 +240,15 @@ export default function Profile() {
   };
 
   const handleLogout = () => {
-    clearCredentials();
     message.success('Logged out successfully.');
-    router.push('/login');
+    isLoggingOutRef.current = true;
+    logout();
   };
 
   const userDisplayName = profile?.fullname || (profile?.first_name && profile?.last_name ? `${profile.first_name} ${profile.last_name}` : '') || currentUser.fullname || 'User';
   const userLocation = profile?.location || currentUser.location || 'Nigeria';
   const userAvatar = profile?.avatar || currentUser.avatar;
+  const kycStatus = getKycStatus(profile) || getKycStatus(currentUser);
 
   return (
     <DashboardLayout>
@@ -301,9 +284,11 @@ export default function Profile() {
               ) : (
                 userDisplayName.charAt(0)
               )}
-              <div className="absolute bottom-0 right-0 w-6 h-6 md:w-8 md:h-8 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center text-white">
-                <CheckCircle2 size={12} className="md:w-4 md:h-4" />
-              </div>
+              {kycStatus === 'approved' && (
+                <div className="absolute bottom-0 right-0 w-6 h-6 md:w-8 md:h-8 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center text-white" title="Verified KYC">
+                  <CheckCircle2 size={12} className="md:w-4 md:h-4" />
+                </div>
+              )}
             </div>
 
             <div className="flex-1 text-center md:text-left">
@@ -324,7 +309,6 @@ export default function Profile() {
 
                 {/* KYC Status Badge */}
                 {(() => {
-                  const kycStatus = getKycStatus(profile) || getKycStatus(currentUser);
                   if (kycStatus === 'approved') {
                     return (
                       <div className="flex items-center gap-1 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-100">

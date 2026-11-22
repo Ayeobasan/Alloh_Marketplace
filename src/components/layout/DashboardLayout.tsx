@@ -2,16 +2,17 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useLogout } from '@/hooks/useLogout';
 import { Search, Bookmark, PlusCircle, User, LayoutGrid, LogOut } from 'lucide-react';
 import clsx from 'clsx';
 import { MobileNav } from './MobileNav';
 
 export const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
-  const router = useRouter();
-  const { activeRole, clearCredentials } = useAuthStore();
+  const { activeRole } = useAuthStore();
+  const logout = useLogout();
   const isSeller = activeRole === 'seller';
 
   const navLinks = isSeller
@@ -71,10 +72,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
 
         <div className="p-4 border-t border-slate-100">
           <button
-            onClick={() => {
-              clearCredentials();
-              router.push('/login');
-            }}
+            onClick={() => logout()}
             className="flex items-center gap-3 px-4 py-3 w-full rounded-xl font-medium text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors"
           >
             <LogOut size={20} className="text-slate-400" />

@@ -2,19 +2,20 @@
 
 import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore, useSavedDemandIds } from '@/store/useAuthStore';
 import { ArrowLeft, MapPin, Clock, ShieldCheck, ShieldAlert, ShieldX, Flag, Phone, Share2, Bookmark, BookmarkCheck, Loader2 } from 'lucide-react';
 import { ReportModal } from '@/components/ui/ReportModal';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { demandsApi } from '@/services/api/demands.api';
-import { getKycStatus } from '@/utils/format';
+import { getKycStatus, getWhatsAppLink } from '@/utils/format';
 
 export default function DemandDetails() {
   const { id } = useParams();
   const router = useRouter();
-  const { role: activeRole, savedDemandIds, toggleSaveDemand } = useAuthStore();
+  const { role: activeRole, toggleSaveDemand } = useAuthStore();
+  const savedDemandIds = useSavedDemandIds();
   const [reportModalOpen, setReportModalOpen] = useState(false);
 
   const demandId = typeof id === 'string' ? id : id?.[0];
@@ -92,7 +93,10 @@ export default function DemandDetails() {
           </a>
           {demand.whatsapp_number && (
             <a
-              href={`https://wa.me/${demand.whatsapp_number}`}
+              href={getWhatsAppLink(
+                demand.whatsapp_number,
+                `Hello, I saw your request "${demand.title}" on Alloh. I can supply this. Let's discuss!`
+              )}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 btn-primary bg-[#25D366] text-white shadow-[#25D366]/20 flex items-center justify-center gap-2"

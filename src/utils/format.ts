@@ -1,3 +1,5 @@
+import type { User } from '@/types';
+
 /**
  * Localized Nigerian Naira formatting
  */
@@ -41,35 +43,37 @@ export function getWhatsAppLink(phone: string, text?: string): string {
   return baseUrl;
 }
 
+export type KycStatus = 'pending' | 'approved' | 'rejected';
+
+const isKycStatus = (value: unknown): value is KycStatus =>
+  value === 'pending' || value === 'approved' || value === 'rejected';
+
+// The backend has returned KYC in several shapes: an object, a bare string, or flat fields.
+type KycSource = Pick<User, 'kyc_status' | 'kycStatus'> & { kyc?: User['kyc'] | string };
+
 /**
- * Resolves KYC status robustly across various data structures (objects, strings, flat variables)
+ * Resolves KYC status robustly across various data structures (objects, strings, flat variables).
+ * Returns null when the user carries no KYC data — that is "unknown", never "verified".
  */
-export function getKycStatus(user: any): 'pending' | 'approved' | 'rejected' | null {
+export function getKycStatus(user: KycSource | null | undefined): KycStatus | null {
   if (!user) return null;
-  
+
   // 1. If user.kyc is an object, check user.kyc.status
-  if (user.kyc && typeof user.kyc === 'object') {
-    if (user.kyc.status) return user.kyc.status;
-  }
-  
-  // 2. If user.kyc is a string itself (e.g. "approved")
-  if (user.kyc && typeof user.kyc === 'string') {
-    return user.kyc as any;
-  }
-  
-  // 3. Flat properties
-  if (user.kyc_status || user.kycStatus) {
-    return user.kyc_status || user.kycStatus;
+  if (user.kyc && typeof user.kyc === 'object' && isKycStatus(user.kyc.status)) {
+    return user.kyc.status;
   }
 
-  // 4. Fallback for two-sided roles if the backend did not populate the kyc/kyc_status fields
-  if (user.roles && user.roles.includes('seller')) {
-    return 'approved';
+  // 2. If user.kyc is a string itself (e.g. "approved")
+  if (isKycStatus(user.kyc)) {
+    return user.kyc;
   }
-  if (user.role === 'seller') {
-    return 'approved';
+
+  // 3. Flat properties
+  const flat = user.kyc_status || user.kycStatus;
+  if (isKycStatus(flat)) {
+    return flat;
   }
-  
+
   return null;
 }
 

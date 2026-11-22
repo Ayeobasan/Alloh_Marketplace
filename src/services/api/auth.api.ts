@@ -42,8 +42,14 @@ export const authApi = {
     return response.data.data || response.data;
   },
 
-  logout: async () => {
-    const response = await apiClient.post('/auth/logout');
+  // Tokens are passed in explicitly because the caller clears the store right away;
+  // the request interceptor only fills Authorization when the store still has a token.
+  logout: async ({ accessToken, refreshToken }: { accessToken: string; refreshToken: string | null }) => {
+    const response = await apiClient.post(
+      '/auth/logout',
+      refreshToken ? { refreshToken } : {},
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
     return response.data;
   },
 
