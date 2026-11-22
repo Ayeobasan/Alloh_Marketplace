@@ -13,6 +13,20 @@ export const apiClient = axios.create({
   },
 });
 
+/** Errors thrown by apiClient: the backend message plus the HTTP status and body. */
+export interface ApiError extends Error {
+  status?: number;
+  data?: unknown;
+  code?: string;
+}
+
+const forceLogout = () => {
+  useAuthStore.getState().clearCredentials();
+  if (typeof window !== 'undefined') {
+    window.location.href = '/login';
+  }
+};
+
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (value: string | PromiseLike<string>) => void;
@@ -61,13 +75,19 @@ apiClient.interceptors.response.use(
     }
     
     // Create custom error object to throw
-    const normalizedError = new Error(normalizedMessage);
-    (normalizedError as any).status = error.response?.status;
-    (normalizedError as any).data = errorData;
-    (normalizedError as any).code = error.code;
+    const normalizedError: ApiError = new Error(normalizedMessage);
+    normalizedError.status = error.response?.status;
+    normalizedError.data = errorData;
+    normalizedError.code = error.code;
 
-    // Check if unauthorized and not retrying yet
-    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/login') && !originalRequest.url?.includes('/auth/refresh-token')) {
+    // Only an authenticated request can fail because the session expired. A 401 from an
+    // /auth/* endpoint (wrong password, bad OTP, logout) or from a request sent without a
+    // token (e.g. one still in flight after logout) is a normal error, not a reason to
+    // refresh or bounce the user to /login.
+    const isAuthEndpoint = originalRequest?.url?.includes('/auth/');
+    const sentWithToken = Boolean(originalRequest?.headers?.Authorization);
+
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint && sentWithToken) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({
@@ -82,18 +102,16 @@ apiClient.interceptors.response.use(
         });
       }
 
-      originalRequest._retry = true;
-      isRefreshing = true;
-
       const refreshToken = useAuthStore.getState().refreshToken;
-      
+
+      // Checked before taking the refresh lock, so the lock can't be left held.
       if (!refreshToken) {
-        useAuthStore.getState().clearCredentials();
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
+        forceLogout();
         return Promise.reject(normalizedError);
       }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
         // Fetch new token
@@ -111,15 +129,12 @@ apiClient.interceptors.response.use(
         // Retry the original request
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return apiClient(originalRequest);
-      } catch (refreshError: any) {
+      } catch (refreshError) {
         processQueue(refreshError, null);
-        
+
         // Refresh failed, clear session and force login
-        useAuthStore.getState().clearCredentials();
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
-        
+        forceLogout();
+
         return Promise.reject(normalizedError);
       } finally {
         isRefreshing = false;

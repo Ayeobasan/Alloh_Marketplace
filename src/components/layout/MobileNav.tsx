@@ -54,18 +54,20 @@ export const MobileNav = () => {
         <span className="text-[10px] font-bold mt-1 text-[#006C04]">Post</span>
       </Link>
 
-      {/* Right Side: Saved and Profile */}
+      {/* Right Side: Saved (sellers only, matching the desktop sidebar) and Profile */}
       <div className="flex flex-1 justify-around max-w-[40%]">
-        <Link 
-          href="/saved" 
-          className={clsx(
-            "flex flex-col items-center gap-1 transition-colors w-14", 
-            pathname === '/saved' ? "text-[#006C04]" : "text-slate-400 hover:text-[#006C04]"
-          )}
-        >
-          <Bookmark size={20} className={pathname === '/saved' ? "fill-emerald-50" : ""} />
-          <span className="text-[10px] font-semibold">Saved</span>
-        </Link>
+        {isSeller && (
+          <Link
+            href="/saved"
+            className={clsx(
+              "flex flex-col items-center gap-1 transition-colors w-14",
+              pathname === '/saved' ? "text-[#006C04]" : "text-slate-400 hover:text-[#006C04]"
+            )}
+          >
+            <Bookmark size={20} className={pathname === '/saved' ? "fill-emerald-50" : ""} />
+            <span className="text-[10px] font-semibold">Saved</span>
+          </Link>
+        )}
 
         <Link 
           href="/profile" 

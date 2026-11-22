@@ -9,6 +9,7 @@ interface VerifyEmailPanelProps {
   onVerify: () => void;
   onResend: () => void;
   onBack?: () => void;
+  backLabel?: string;
   isVerifying: boolean;
   isResending: boolean;
   resendCooldown: number;
@@ -21,6 +22,7 @@ export function VerifyEmailPanel({
   onVerify,
   onResend,
   onBack,
+  backLabel = "Back to login",
   isVerifying,
   isResending,
   resendCooldown,
@@ -119,7 +121,7 @@ export function VerifyEmailPanel({
           className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors"
         >
           <ArrowLeft size={13} />
-          Back to login
+          {backLabel}
         </button>
       )}
     </div>

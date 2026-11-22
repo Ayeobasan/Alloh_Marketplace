@@ -2,39 +2,43 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { productsApi } from '@/services/api/products.api';
 import { PaginatedProducts } from '@/types';
 
+// Product lists are cached per params (e.g. ['my-products', { page: 1, limit: 50 }]),
+// so they're matched by key prefix rather than looked up by an exact key.
+const LIST_KEYS = [['my-products'], ['products']] as const;
+
+const withoutProduct = (deletedId: string) => (old: PaginatedProducts | undefined) => {
+  if (!old) return old;
+  const data = old.data.filter((product) => product.id !== deletedId);
+  if (data.length === old.data.length) return old;
+  return { ...old, data, total: Math.max(0, old.total - 1) };
+};
+
 export function useDeleteProduct() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (id: string) => productsApi.deleteProduct(id),
-    
+
     onMutate: async (deletedId: string) => {
-      await queryClient.cancelQueries({ queryKey: ['my-products'] });
-      await queryClient.cancelQueries({ queryKey: ['products'] });
+      await Promise.all(LIST_KEYS.map((queryKey) => queryClient.cancelQueries({ queryKey })));
 
-      const previousMyProducts = queryClient.getQueryData<PaginatedProducts>(['my-products']);
-      const previousProductsList = queryClient.getQueryData<PaginatedProducts>(['products']);
+      const previousLists = LIST_KEYS.flatMap((queryKey) =>
+        queryClient.getQueriesData<PaginatedProducts>({ queryKey })
+      );
 
-      if (previousMyProducts) {
-        queryClient.setQueryData<PaginatedProducts>(['my-products'], {
-          ...previousMyProducts,
-          data: previousMyProducts.data.filter((product) => product.id !== deletedId),
-          total: Math.max(0, previousMyProducts.total - 1),
-        });
-      }
+      LIST_KEYS.forEach((queryKey) =>
+        queryClient.setQueriesData<PaginatedProducts>({ queryKey }, withoutProduct(deletedId))
+      );
 
-      return { previousMyProducts, previousProductsList };
+      return { previousLists };
     },
-    
-    onError: (err, deletedId, context) => {
-      if (context?.previousMyProducts) {
-        queryClient.setQueryData(['my-products'], context.previousMyProducts);
-      }
-      if (context?.previousProductsList) {
-        queryClient.setQueryData(['products'], context.previousProductsList);
-      }
+
+    onError: (_err, _deletedId, context) => {
+      context?.previousLists.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
     },
-    
+
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['my-products'] });

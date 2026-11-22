@@ -1,7 +1,7 @@
 import React from 'react';
 import { DemandPost } from '@/types';
 import { MapPin, Clock, Phone, Bookmark, BookmarkCheck, Edit, Trash2 } from 'lucide-react';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore, useSavedDemandIds } from '@/store/useAuthStore';
 import Link from 'next/link';
 
 interface DemandCardProps {
@@ -38,7 +38,8 @@ export const DemandCard: React.FC<DemandCardProps> = ({
   onEdit, 
   onDelete 
 }) => {
-  const { savedDemandIds, toggleSaveDemand, role: activeRole } = useAuthStore();
+  const { toggleSaveDemand, role: activeRole } = useAuthStore();
+  const savedDemandIds = useSavedDemandIds();
   const isSaved = savedDemandIds.includes(demand.id);
   const isSeller = activeRole === 'seller';
 

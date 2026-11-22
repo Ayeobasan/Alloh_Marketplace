@@ -6,9 +6,14 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useQuery } from '@tanstack/react-query';
 import { productsApi } from '@/services/api/products.api';
 import { formatCurrency, getWhatsAppLink, getKycStatus } from '@/utils/format';
-import { ArrowLeft, MapPin, Phone, MessageSquare, ShieldCheck, Loader2, Flag } from 'lucide-react';
-import Link from 'next/link';
+import { ArrowLeft, MapPin, Phone, MessageSquare, ShieldCheck, ShieldX, Clock, Loader2, Flag } from 'lucide-react';
 import { ReportModal } from '@/components/ui/ReportModal';
+
+const LISTING_STATUS = {
+  Active: { label: 'Active', className: 'text-emerald-700', Icon: ShieldCheck },
+  Pending: { label: 'Under Review', className: 'text-amber-700', Icon: Clock },
+  Rejected: { label: 'Rejected', className: 'text-rose-700', Icon: ShieldX },
+} as const;
 
 interface ProductDetailsPageProps {
   params: Promise<{ id: string }>;
@@ -127,10 +132,20 @@ export default function ProductDetailsPage({ params }: ProductDetailsPageProps) 
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">Listing Status</span>
-                  <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700">
-                    <ShieldCheck size={14} />
-                    Verified Active
-                  </span>
+                  {(() => {
+                    const status = LISTING_STATUS[product.status] ?? {
+                      label: product.status || 'Unknown',
+                      className: 'text-slate-600',
+                      Icon: Clock,
+                    };
+                    const { Icon } = status;
+                    return (
+                      <span className={`inline-flex items-center gap-1 text-xs font-bold ${status.className}`}>
+                        <Icon size={14} />
+                        {status.label}
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -164,7 +179,7 @@ export default function ProductDetailsPage({ params }: ProductDetailsPageProps) 
                       )}
                     </div>
                     <span className="text-xs text-slate-400 font-semibold block">
-                      {product.user?.farm_name || product.user?.farmName || 'Verified Independent Seller'}
+                      {product.user?.farm_name || product.user?.farmName || 'Independent Seller'}
                     </span>
                   </div>
                 </div>

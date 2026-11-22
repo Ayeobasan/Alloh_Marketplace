@@ -12,6 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import { statesApi } from '@/services/api/states.api';
 import { categoriesApi } from '@/services/api/categories.api';
+import { useSearchParamInput } from '@/hooks/useSearchParamInput';
 
 function ProductsFeed() {
   const router = useRouter();
@@ -66,6 +67,7 @@ function ProductsFeed() {
   const searchQuery = searchParams.get('search') || '';
   const selectedState = searchParams.get('state') || 'All';
   const selectedCategory = searchParams.get('category') || 'All';
+  const [searchInput, setSearchInput] = useSearchParamInput('search');
 
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
@@ -109,10 +111,6 @@ function ProductsFeed() {
       params.set(key, value);
     }
     router.push(`${pathname}?${params.toString()}`);
-  };
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilter('search', e.target.value);
   };
 
   const clearFilters = () => {
@@ -203,8 +201,8 @@ function ProductsFeed() {
                   <input
                     type="text"
                     placeholder="Search farm products..."
-                    value={searchQuery}
-                    onChange={handleSearchChange}
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
                     className="w-full h-12 pl-12 pr-4 bg-white border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-medium"
                   />
                 </div>

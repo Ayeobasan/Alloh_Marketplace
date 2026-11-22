@@ -75,7 +75,7 @@ export const Modal: React.FC<ModalProps> & {
       >
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between shrink-0">
-          <div className="text-base font-extrabold text-slate-850 tracking-tight">
+          <div className="text-base font-extrabold text-slate-800 tracking-tight">
             {title}
           </div>
           {closable && (
@@ -146,7 +146,7 @@ Modal.confirm = (props: ModalConfirmProps) => {
       <div className="relative bg-white flex flex-col shadow-2xl rounded-3xl border border-slate-100 w-full max-w-[400px] animate-in zoom-in-95 duration-200 z-50 overflow-hidden">
         {/* Body */}
         <div className="px-6 pt-6 pb-4">
-          <h3 className="text-base font-extrabold text-slate-850 tracking-tight mb-2">
+          <h3 className="text-base font-extrabold text-slate-800 tracking-tight mb-2">
             {props.title}
           </h3>
           <div className="text-sm text-slate-500 leading-relaxed">
@@ -158,7 +158,7 @@ Modal.confirm = (props: ModalConfirmProps) => {
         <div className="px-6 py-4 flex items-center justify-end gap-3 shrink-0 bg-slate-50/50">
           <button
             onClick={handleCancel}
-            className="px-4 py-2 rounded-xl text-slate-650 hover:bg-slate-100 hover:text-slate-850 text-sm font-semibold transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-800 text-sm font-semibold transition-colors cursor-pointer"
           >
             {props.cancelText || 'Cancel'}
           </button>
@@ -166,7 +166,7 @@ Modal.confirm = (props: ModalConfirmProps) => {
             onClick={handleOk}
             className={`px-4 py-2 rounded-xl text-sm font-bold text-white transition-all shadow-md hover:scale-[1.02] cursor-pointer ${
               props.okType === 'danger'
-                ? 'bg-rose-650 hover:bg-rose-700 shadow-rose-100'
+                ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-100'
                 : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100'
             }`}
           >

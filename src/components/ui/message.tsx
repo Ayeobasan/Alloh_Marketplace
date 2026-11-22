@@ -56,7 +56,7 @@ class ToastManager {
         </div>
         <button
           onClick={removeToast}
-          className="shrink-0 text-slate-400 hover:text-slate-650 transition-colors cursor-pointer"
+          className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
         >
           <X size={14} />
         </button>

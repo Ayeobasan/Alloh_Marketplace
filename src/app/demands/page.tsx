@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { demandsApi } from '@/services/api/demands.api';
 import { statesApi } from '@/services/api/states.api';
+import { useSearchParamInput } from '@/hooks/useSearchParamInput';
 
 function DemandsFeed() {
   const router = useRouter();
@@ -65,6 +66,7 @@ function DemandsFeed() {
   const searchQuery = searchParams.get('search') || '';
   const selectedState = searchParams.get('state') || 'All';
   const selectedUrgency = searchParams.get('urgency') || 'All';
+  const [searchInput, setSearchInput] = useSearchParamInput('search');
 
   // State Selector metadata query
   const { data: statesData = [] } = useQuery({
@@ -99,10 +101,6 @@ function DemandsFeed() {
       params.set(key, value);
     }
     router.push(`${pathname}?${params.toString()}`);
-  };
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilter('search', e.target.value);
   };
 
   const clearFilters = () => {
@@ -202,8 +200,8 @@ function DemandsFeed() {
                     type="text"
                     placeholder="Search buyer requests..."
                     className="w-full bg-white border border-slate-200 rounded-2xl py-3 pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm"
-                    value={searchQuery}
-                    onChange={handleSearchChange}
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
                   />
                 </div>
                 <button

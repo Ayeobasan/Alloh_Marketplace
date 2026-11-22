@@ -59,7 +59,7 @@ export const Drawer: React.FC<DrawerProps> = ({
       >
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between shrink-0">
-          <h2 className="text-base font-extrabold text-slate-850 tracking-tight">{title}</h2>
+          <h2 className="text-base font-extrabold text-slate-800 tracking-tight">{title}</h2>
           <div className="flex items-center gap-3">
             {extra}
             <button
