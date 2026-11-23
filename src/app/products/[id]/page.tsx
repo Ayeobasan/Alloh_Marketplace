@@ -72,7 +72,7 @@ export default function ProductDetailsPage({ params }: ProductDetailsPageProps) 
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-[#F9FAFB] pb-24 md:pb-12 font-sans">
+      <div className="min-h-screen bg-[#F9FAFB] pb-12 font-sans">
         {/* Sticky Header */}
         <header className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-slate-100 z-40">
           <div className="px-6 py-4 flex items-center gap-4 max-w-3xl mx-auto">
@@ -185,6 +185,33 @@ export default function ProductDetailsPage({ params }: ProductDetailsPageProps) 
                 </div>
               </div>
 
+              {/* Contact actions, inline on every screen size: a fixed bottom bar on
+                  phones sat under the fixed MobileNav and couldn't be seen. */}
+              {sellerPhone ? (
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <a
+                    href={`tel:${sellerPhone}`}
+                    className="flex-1 h-12 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold flex items-center justify-center gap-2 text-sm transition-colors"
+                  >
+                    <Phone size={18} />
+                    Call Seller
+                  </a>
+                  <a
+                    href={whatsAppUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center justify-center gap-2 text-sm shadow-lg shadow-emerald-100 transition-colors"
+                  >
+                    <MessageSquare size={18} />
+                    WhatsApp Seller
+                  </a>
+                </div>
+              ) : (
+                <div className="w-full text-center py-4 bg-slate-50 text-slate-500 rounded-xl font-medium text-sm">
+                  This seller hasn&apos;t added a phone number yet.
+                </div>
+              )}
+
               {/* Report Button */}
               <div className="flex justify-center border-t border-slate-100 pt-8">
                 <button
@@ -199,53 +226,6 @@ export default function ProductDetailsPage({ params }: ProductDetailsPageProps) 
           </div>
         </main>
 
-        {/* Contact panel: Mobile sticky bottom, desktop inline float */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-100 p-4 flex md:hidden gap-3 shadow-[0_-8px_20px_rgba(0,0,0,0.05)]">
-          {sellerPhone && (
-            <a 
-              href={`tel:${sellerPhone}`} 
-              className="flex-1 h-12 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-bold flex items-center justify-center gap-2 text-sm"
-            >
-              <Phone size={18} />
-              Call Seller
-            </a>
-          )}
-          {sellerPhone && (
-            <a 
-              href={whatsAppUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center justify-center gap-2 text-sm shadow-lg shadow-emerald-100"
-            >
-              <MessageSquare size={18} />
-              WhatsApp
-            </a>
-          )}
-        </div>
-
-        {/* Desktop inline panel */}
-        <div className="hidden md:flex max-w-3xl mx-auto px-6 gap-4 mt-6 justify-end">
-          {sellerPhone && (
-            <a 
-              href={`tel:${sellerPhone}`} 
-              className="px-6 py-3 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold flex items-center gap-2 transition-colors shadow-sm"
-            >
-              <Phone size={18} />
-              Call Seller
-            </a>
-          )}
-          {sellerPhone && (
-            <a 
-              href={whatsAppUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-8 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-2 transition-all shadow-md shadow-emerald-100 hover:scale-[1.02]"
-            >
-              <MessageSquare size={18} />
-              WhatsApp Seller
-            </a>
-          )}
-        </div>
       </div>
 
       <ReportModal
